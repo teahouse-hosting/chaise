@@ -1,6 +1,18 @@
-from typing import AsyncIterator
+from typing import AsyncIterator, Literal
 
 import httpx
+
+
+class Conflict(Exception):
+    """
+    There was a conflict when trying to perform the operation.
+    """
+
+
+class Missing(Exception):
+    """
+    Could not find the requested document
+    """
 
 
 class CouchSession:
@@ -26,7 +38,7 @@ class CouchSession:
         latest: bool = False,
         local_seq: bool = False,
         meta: bool = False,
-        open_revs: list[str] | None = None,
+        open_revs: list[str] | Literal["all"] | None = None,
         rev: str | None = None,
         revs: bool = False,
         revs_info: bool = False,
@@ -36,6 +48,35 @@ class CouchSession:
 
         https://docs.couchdb.org/en/stable/api/document/common.html#get--db-docid
         """
+        resp = await self._client.get(
+            self._root.join(db, docid),
+            params={
+                "attachments": attachments,
+                "conflicts": conflicts,
+                "deleted_conflicts": deleted_conflicts,
+                "latest": latest,
+                "local_seq": local_seq,
+                "meta": meta,
+                "open_revs": open_revs,
+                "rev": rev,
+                "revs": revs,
+                "revs_info": revs_info,
+            },
+        )
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            match exc.response.status_code:
+                case 404:
+                    raise Missing(f"Could not find {docid!r} in {db!r}") from exc
+                case 409:
+                    raise Conflict(f"Conflict updating {docid!r} in {db!r}") from exc
+                case _:
+                    raise
+
+        blob = resp.json()
+        doc = blob  # FIXME: parse into a document
+        return doc
 
     def attempt_put_doc(self, doc, *, batch: bool = False):
         """
@@ -57,6 +98,25 @@ class CouchSession:
 
         https://docs.couchdb.org/en/stable/api/document/common.html#copy--db-docid
         """
+
+    async def mutate_doc(self, db: str, docid: str) -> AsyncIterator:
+        """
+        A document mutation loop::
+
+            async for doc in couch.mutate_doc("spam", "eggs"):
+                doc.foo = "bar"
+
+        Will replay the mutation until it goes through.
+        """
+        doc = await self.get_doc(db, docid)
+        yield doc
+        while True:
+            try:
+                await self.attempt_put_doc(doc)
+            except Conflict:
+                doc = await self.get_doc(db, docid)
+            else:
+                break
 
     # TODO: Mango searches
     # TODO: Database operations
