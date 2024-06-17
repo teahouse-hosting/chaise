@@ -1,6 +1,55 @@
-from typing import AsyncIterator, Literal
+from typing import AsyncIterator, Literal, Callable, Protocol, typevar, Generic
 
 import httpx
+
+
+DOCT = typevar("DOCT")
+
+
+class DocumentLoader(Protocol, Generic[DOCT]):
+    def loadj(self, blob: dict) -> DOCT:
+        """
+        Convert a JSON blob into a document object.
+        """
+
+    def dumpj(self, doc: DOCT) -> dict:
+        """
+        Convert a document into a JSON blob.
+        """
+
+
+class DocumentRegistry:
+    """
+    Handles de/serialization, manages migrations, etc.
+
+    Default loader implementation.
+
+    Must subclass.
+    """
+
+    @classmethod
+    def document(cls, name: str):
+        """
+        Register a class as a loadable couch document.
+        """
+
+        def _(klass: type):
+            return klass
+
+        return _
+
+    @classmethod
+    def migration(cls, before: type, after: type):
+        """
+        Define a function that'll convert between documents.
+        """
+
+        def _(func: Callable):
+            return func
+
+        return _
+
+    def loadj(self, blob): ...
 
 
 class Conflict(Exception):
@@ -15,6 +64,12 @@ class Missing(Exception):
     """
 
 
+class Deleted(Exception):
+    """
+    Requested a deleted document.
+    """
+
+
 class CouchSession:
     """
     A connection to CouchDB.
@@ -23,9 +78,43 @@ class CouchSession:
     _client: httpx.AsyncClient
     _root: httpx.URL
 
+    loader: type[DocumentLoader]
+
     def __init__(self, client: httpx.AsyncClient, root: httpx.URL):
         self._client = client
         self._root = root
+
+    def _request(self, method, *urlparts, **kwargs):
+        resp = self._client.request(self._root.join(*urlparts), **kwargs)
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            match exc.response.status_code:
+                case 404:
+                    raise Missing(f"Could not find {'/'.join(urlparts)}") from exc
+                case 409:
+                    raise Conflict(f"Conflict updating {'/'.join(urlparts)}") from exc
+                case _:
+                    raise
+        return resp
+
+    def _blob2doc(self, blob, db, docid, etag):
+        doc = self.loader().loadj(blob)
+        doc.__db = db
+        doc.__docid = docid
+        doc.__etag = etag
+        return doc
+
+    def _doc2blob(self, doc):
+        blob = self.loader().dumpj(doc)
+        db = docid = etag = None
+        try:
+            db = doc.__db
+            docid = doc.__docid
+            etag = doc.__etag
+        except AttributeError:
+            pass
+        return blob, db, docid, etag
 
     def get_doc(
         self,
@@ -48,8 +137,10 @@ class CouchSession:
 
         https://docs.couchdb.org/en/stable/api/document/common.html#get--db-docid
         """
-        resp = await self._client.get(
-            self._root.join(db, docid),
+        resp = await self._request(
+            "GET",
+            db,
+            docid,
             params={
                 "attachments": attachments,
                 "conflicts": conflicts,
@@ -62,28 +153,47 @@ class CouchSession:
                 "revs": revs,
                 "revs_info": revs_info,
             },
+            headers={
+                "Accept": "application/json",
+            },
         )
-        try:
-            resp.raise_for_status()
-        except httpx.HTTPStatusError as exc:
-            match exc.response.status_code:
-                case 404:
-                    raise Missing(f"Could not find {docid!r} in {db!r}") from exc
-                case 409:
-                    raise Conflict(f"Conflict updating {docid!r} in {db!r}") from exc
-                case _:
-                    raise
 
         blob = resp.json()
-        doc = blob  # FIXME: parse into a document
+        if blob.get("_deleted", False):  # TODO: Flag to override this
+            raise Deleted("Document {db}/{docid} is marked as deleted")
+        if "ETag" in resp.headers:
+            etag = resp.headers["ETag"]
+        else:
+            # Conflicts mode
+            etag = f'"{blob["_rev"]}"'
+        doc = self._blob2doc(blob, db, docid, etag)
         return doc
 
-    def attempt_put_doc(self, doc, *, batch: bool = False):
+    # TODO: Attachments
+
+    def attempt_put_doc(
+        self,
+        doc,
+        db: str | None = None,
+        docid: str | None = None,
+        *,
+        batch: bool = False,
+    ):
         """
-        Update a document
+        Update a document.
+
+        db and docid only need to be given if it's a new document.
 
         https://docs.couchdb.org/en/stable/api/document/common.html#put--db-docid
         """
+        blob, _db, _docid, etag = self._doc2blob(doc)
+        await self._request(
+            "PUT",
+            _db or db,
+            _docid or docid,
+            params={"batch": "ok"} if batch else {},
+            headers={"If-Match": etag} if etag else {},
+        )
 
     def attempt_delete_doc(self, doc, *, batch: bool = False):
         """
@@ -91,6 +201,16 @@ class CouchSession:
 
         https://docs.couchdb.org/en/stable/api/document/common.html#delete--db-docid
         """
+        _, db, docid, etag = self._doc2blob(doc)
+        assert db
+        assert docid
+        await self._request(
+            "DELETE",
+            db,
+            docid,
+            params={"batch": "ok"} if batch else {},
+            headers={"If-Match": etag},
+        )
 
     def attempt_copy_doc(self, src_doc, dst_doc, *, batch: bool = False):
         """
@@ -98,6 +218,7 @@ class CouchSession:
 
         https://docs.couchdb.org/en/stable/api/document/common.html#copy--db-docid
         """
+        # FIXME: Figure out signature
 
     async def mutate_doc(self, db: str, docid: str) -> AsyncIterator:
         """
@@ -109,8 +230,8 @@ class CouchSession:
         Will replay the mutation until it goes through.
         """
         doc = await self.get_doc(db, docid)
-        yield doc
         while True:
+            yield doc
             try:
                 await self.attempt_put_doc(doc)
             except Conflict:
