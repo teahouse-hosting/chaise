@@ -27,6 +27,8 @@ class DocumentRegistry:
     Must subclass.
     """
 
+    TYPE_KEY = ""
+
     @classmethod
     def document(cls, name: str):
         """
@@ -49,7 +51,33 @@ class DocumentRegistry:
 
         return _
 
-    def loadj(self, blob): ...
+    def load_doc(self, cls: type, blob: dict):
+        """
+        Converts a JSON blob into a document.
+
+        Override me.
+        """
+        raise NotImplementedError
+
+    def dump_doc(self, doc) -> dict:
+        """
+        Convert a document into a JSON blob.
+
+        Override me.
+        """
+        raise NotImplementedError
+
+    def loadj(self, blob):
+        type = blob.pop(self.TYPE_KEY)
+        klass = ...(type)  # TODO: find class from type
+        doc = self.load_doc(klass, blob)
+        # TODO: Migrations
+        return doc
+
+    def dumpj(self, doc):
+        blob = self.dump_doc(doc)
+        blob[self.TYPE_KEY] = ...  # TODO: Find type from class
+        return blob
 
 
 class Conflict(Exception):
