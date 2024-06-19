@@ -3,13 +3,11 @@ name: Python package
 on: [push]
 
 jobs:
-  build:
+  lint:
 
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up pre-commit
-        run: sudo apt-get install pre-commit
-      - name: Run pre-commit
-        run: pre-commit run --all-files
+      - uses: actions/setup-python@v5
+      - uses: teahouse-hosting/pre-commit@main
