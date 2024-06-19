@@ -56,7 +56,7 @@ async def test_conflicting_mutate(dict_database, dict_models):
     """
     Test that a conflicting mutation works
     """
-    doc = dict_models.Foo(count=0)
+    doc = dict_models.Counter(count=0)
     await dict_database.attempt_put(doc, "test")
 
     # 1. Loser gets the doc
@@ -89,3 +89,12 @@ async def test_conflicting_mutate(dict_database, dict_models):
 
     doc = await dict_database.get("test")
     assert doc["count"] == 2
+
+
+async def test_migration(dict_database, dict_models):
+    start = dict_models.OldFoo(bar="spam")
+    await dict_database.attempt_put(start, "test")
+
+    end = await dict_database.get("test")
+    assert isinstance(end, dict_models.Foo)
+    assert end["bar"] == "Spam"

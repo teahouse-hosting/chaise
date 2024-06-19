@@ -53,12 +53,26 @@ class DictPool(chaise.SessionPool):
 
 @pytest.fixture(scope="session")
 def dict_models():
-    @DictRegistry.document("FooV1")
+    @DictRegistry.document("Foo1")
+    class OldFoo(chaise.dictful.Document):
+        pass
+
+    @DictRegistry.document("Foo2")
     class Foo(chaise.dictful.Document):
+        pass
+
+    @DictRegistry.migration(OldFoo, Foo)
+    def foo_migration(old):
+        return Foo(bar=old["bar"].title())
+
+    @DictRegistry.document("Counter")
+    class Counter(chaise.dictful.Document):
         pass
 
     return types.SimpleNamespace(
         Foo=Foo,
+        OldFoo=OldFoo,
+        Counter=Counter,
     )
 
 
