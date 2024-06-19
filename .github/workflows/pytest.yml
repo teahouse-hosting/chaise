@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -20,8 +22,6 @@ jobs:
           cache: poetry
       # You can test your matrix by printing the current Python version
       - name: Install Dependencies
-        run: |
-          pip install poetry
-          poetry install
+        run: poetry install
       - name: Run tests
         run: poetry run pytest --verbose
