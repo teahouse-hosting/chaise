@@ -9,11 +9,11 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 httpx = {extras = ["http2"], version = "^0.27.0"}
+anyio = "^4.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
-anyio = "^4.4.0"
-trio = "^0.25.1"
+anyio = {extras = ["trio"], version = "^4.4.0"}
 
 [build-system]
 requires = ["poetry-core"]
