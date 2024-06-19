@@ -145,15 +145,66 @@ class CouchSession:
                     raise
         return resp
 
+    def __getitem__(self, key: str) -> "Database":
+        """
+        Gets a database.
+
+        (Does not actually check if it exists.)
+        """
+        return Database(self, key)
+
+    async def get_db(self, dbname: str) -> "Database":
+        """
+        Gets a database. Checks if it exists.
+        """
+        await self._request("HEAD", dbname)
+        return Database(self, dbname)
+
+    async def create_db(
+        self,
+        dbname: str,
+        *,
+        shards: int | None = None,
+        replicas: int | None = None,
+        partitioned: bool | None = None,
+    ) -> "Database":
+        """
+        Create a database
+        """
+        await self._request(
+            "PUT",
+            dbname,
+            params={
+                "q": shards,
+                "n": replicas,
+                partitioned: partitioned,
+            },
+        )
+        return Database(self, dbname)
+
+    async def delete_db(self, dbname: str):
+        """
+        Delete a database.
+        """
+        await self._request("DELETE", dbname)
+
+    # TODO: Database metadata
+
+
+class Database:
+    def __init__(self, session, name):
+        self._session = session
+        self._name = name
+
     def _blob2doc(self, blob, db, docid, etag):
-        doc = self.loader().loadj(blob)
+        doc = self._session.loader().loadj(blob)
         doc.__db = db
         doc.__docid = docid
         doc.__etag = etag
         return doc
 
     def _doc2blob(self, doc):
-        blob = self.loader().dumpj(doc)
+        blob = self._session.loader().dumpj(doc)
         db = docid = etag = None
         try:
             db = doc.__db
@@ -163,9 +214,8 @@ class CouchSession:
             pass
         return blob, db, docid, etag
 
-    async def get_doc(
+    async def get(
         self,
-        db: str,
         docid: str,
         *,
         attachments: bool = False,
@@ -184,9 +234,9 @@ class CouchSession:
 
         https://docs.couchdb.org/en/stable/api/document/common.html#get--db-docid
         """
-        resp = await self._request(
+        resp = await self._session._request(
             "GET",
-            db,
+            self._name,
             docid,
             params={
                 "attachments": attachments,
@@ -207,21 +257,20 @@ class CouchSession:
 
         blob = resp.json()
         if blob.get("_deleted", False):  # TODO: Flag to override this
-            raise Deleted("Document {db}/{docid} is marked as deleted")
+            raise Deleted("Document {self._name}/{docid} is marked as deleted")
         if "ETag" in resp.headers:
             etag = resp.headers["ETag"]
         else:
             # Conflicts mode
             etag = f'"{blob["_rev"]}"'
-        doc = self._blob2doc(blob, db, docid, etag)
+        doc = self._blob2doc(blob, self._name, docid, etag)
         return doc
 
     # TODO: Attachments
 
-    async def attempt_put_doc(
+    async def attempt_put(
         self,
         doc,
-        db: str | None = None,
         docid: str | None = None,
         *,
         batch: bool = False,
@@ -234,25 +283,26 @@ class CouchSession:
         https://docs.couchdb.org/en/stable/api/document/common.html#put--db-docid
         """
         blob, _db, _docid, etag = self._doc2blob(doc)
-        await self._request(
+        assert _db is None or _db == self._name
+        await self._session._request(
             "PUT",
-            _db or db,
+            self._name,
             _docid or docid,
             params={"batch": "ok"} if batch else {},
             headers={"If-Match": etag} if etag else {},
             json=blob,
         )
 
-    async def attempt_delete_doc(self, doc, *, batch: bool = False):
+    async def attempt_delete(self, doc, *, batch: bool = False):
         """
         Delete a document
 
         https://docs.couchdb.org/en/stable/api/document/common.html#delete--db-docid
         """
         _, db, docid, etag = self._doc2blob(doc)
-        assert db
+        assert db == self._name
         assert docid
-        await self._request(
+        await self._session._request(
             "DELETE",
             db,
             docid,
@@ -260,7 +310,7 @@ class CouchSession:
             headers={"If-Match": etag},
         )
 
-    async def attempt_copy_doc(self, src_doc, dst_doc, *, batch: bool = False):
+    async def attempt_copy(self, src_doc, dst_doc, *, batch: bool = False):
         """
         Copy a document
 
@@ -268,7 +318,7 @@ class CouchSession:
         """
         # FIXME: Figure out signature
 
-    async def mutate_doc(self, db: str, docid: str) -> AsyncIterator:
+    async def mutate(self, docid: str) -> AsyncIterator:
         """
         A document mutation loop::
 
@@ -277,13 +327,13 @@ class CouchSession:
 
         Will replay the mutation until it goes through.
         """
-        doc = await self.get_doc(db, docid)
+        doc = await self.get(docid)
         while True:
             yield doc
             try:
-                await self.attempt_put_doc(doc)
+                await self.attempt_put(doc)
             except Conflict:
-                doc = await self.get_doc(db, docid)
+                doc = await self.get(docid)
             else:
                 break
 

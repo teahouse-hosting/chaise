@@ -18,16 +18,13 @@ def basic_pool(couch_url):
 
 
 @pytest.fixture
-async def basic_database(basic_pool, generate_dbname):
-    session = await basic_pool.session()
-    # Not actually secret, just the simplest way to generate a name
-    dbname = generate_dbname()
-    # TODO: Use native session methods, when they're written
-    await session._request("PUT", dbname)
-    yield dbname
-    await session._request("DELETE", dbname)
+async def basic_session(basic_pool):
+    return await basic_pool.session()
 
 
 @pytest.fixture
-async def basic_session(basic_pool):
-    return await basic_pool.session()
+async def basic_database(basic_session, generate_dbname):
+    dbname = generate_dbname()
+    db = await basic_session.create_db(dbname)
+    yield db
+    await basic_session.delete_db(dbname)
