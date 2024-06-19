@@ -31,9 +31,11 @@ class DocumentRegistry:
     TYPE_KEY = ""
 
     _docclasses = {}
+    _migrations = []
 
     def __init_sublcass__(cls):
         cls._docclasses = {}
+        cls._migrations = []
 
     @classmethod
     def _get_class_from_name(cls, name: str) -> type:
@@ -44,6 +46,8 @@ class DocumentRegistry:
         for name, kind in cls._docclasses.items():
             if issubclass(klass, kind):  # In case of decorator shenanigans
                 return name
+        else:
+            raise ValueError(f"Couldn't find name for {klass}")
 
     @classmethod
     def document(cls, name: str):
@@ -63,8 +67,14 @@ class DocumentRegistry:
         """
         Define a function that'll convert between documents.
         """
+        # Normalize to the document classes previously registered
+        bname = cls._get_name_from_class(before)
+        aname = cls._get_name_from_class(after)
+        # Enforce linearity
+        assert not any(b == bname for b, _, _ in cls._migrations)
 
         def _(func: Callable):
+            cls._migrations.append((bname, aname, func))
             return func
 
         return _
