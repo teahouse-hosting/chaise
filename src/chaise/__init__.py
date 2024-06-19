@@ -89,13 +89,17 @@ class Conflict(Exception):
 
 class Missing(Exception):
     """
-    Could not find the requested document
+    Could not find the requested document.
+
+    Note that this is a 404, not a tombstone.
     """
 
 
 class Deleted(Exception):
     """
     Requested a deleted document.
+
+    Note that this is a document with a tombstone, not a 404.
     """
 
 
