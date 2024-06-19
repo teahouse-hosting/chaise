@@ -1,9 +1,10 @@
-from typing import AsyncIterator, Literal, Callable, Protocol, typevar, Generic
+import json
+from typing import AsyncIterator, Literal, Callable, Protocol, TypeVar, Generic
 
 import httpx
 
 
-DOCT = typevar("DOCT")
+DOCT = TypeVar("DOCT")
 
 
 class DocumentLoader(Protocol, Generic[DOCT]):
@@ -112,11 +113,25 @@ class CouchSession:
         self._client = client
         self._root = root
 
-    def _request(self, method, *urlparts, **kwargs):
-        resp = self._client.request(self._root.join(*urlparts), **kwargs)
+    @staticmethod
+    def _fix_params(params):
+        rv = {}
+        for key, value in params.items():
+            if value is None:
+                continue
+            else:
+                rv[key] = json.dumps(value)
+        return rv
+
+    async def _request(self, method, *urlparts, **kwargs):
+        url = self._root.join("/".join(urlparts))
+        if "params" in kwargs:
+            kwargs["params"] = self._fix_params(kwargs["params"])
+        resp = await self._client.request(method, url, **kwargs)
         try:
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            exc.add_note(f"Body: {exc.response.text}")
             match exc.response.status_code:
                 case 404:
                     raise Missing(f"Could not find {'/'.join(urlparts)}") from exc
@@ -144,7 +159,7 @@ class CouchSession:
             pass
         return blob, db, docid, etag
 
-    def get_doc(
+    async def get_doc(
         self,
         db: str,
         docid: str,
@@ -199,7 +214,7 @@ class CouchSession:
 
     # TODO: Attachments
 
-    def attempt_put_doc(
+    async def attempt_put_doc(
         self,
         doc,
         db: str | None = None,
@@ -221,9 +236,10 @@ class CouchSession:
             _docid or docid,
             params={"batch": "ok"} if batch else {},
             headers={"If-Match": etag} if etag else {},
+            json=blob,
         )
 
-    def attempt_delete_doc(self, doc, *, batch: bool = False):
+    async def attempt_delete_doc(self, doc, *, batch: bool = False):
         """
         Delete a document
 
@@ -240,7 +256,7 @@ class CouchSession:
             headers={"If-Match": etag},
         )
 
-    def attempt_copy_doc(self, src_doc, dst_doc, *, batch: bool = False):
+    async def attempt_copy_doc(self, src_doc, dst_doc, *, batch: bool = False):
         """
         Copy a document
 
@@ -298,7 +314,8 @@ class SessionPool:
         Override this
         """
         raise NotImplementedError
-        yield from ()
+        for _ in ():
+            yield
 
     async def _check_server(self, url: httpx.URL):
         resp = await self._client.get(url.join("_up"))
