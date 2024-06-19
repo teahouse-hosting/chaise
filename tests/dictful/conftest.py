@@ -1,3 +1,5 @@
+import types
+
 import pytest
 
 import chaise.dictful
@@ -28,3 +30,51 @@ async def basic_database(basic_session, generate_dbname):
     db = await basic_session.create_db(dbname)
     yield db
     await basic_session.delete_db(dbname)
+
+
+class DictRegistry(chaise.dictful.DictRegistry):
+    pass
+
+
+class DictSession(chaise.CouchSession):
+    loader = DictRegistry
+
+
+class DictPool(chaise.SessionPool):
+    session_class = DictSession
+
+    def __init__(self, url: str):
+        self.url = url
+        super().__init__()
+
+    async def iter_servers(self):
+        yield self.url
+
+
+@pytest.fixture(scope="session")
+def dict_models():
+    @DictRegistry.document("FooV1")
+    class Foo(chaise.dictful.Document):
+        pass
+
+    return types.SimpleNamespace(
+        Foo=Foo,
+    )
+
+
+@pytest.fixture
+def dict_pool(couch_url):
+    return DictPool(couch_url)
+
+
+@pytest.fixture
+async def dict_session(dict_pool):
+    return await dict_pool.session()
+
+
+@pytest.fixture
+async def dict_database(dict_session, generate_dbname):
+    dbname = generate_dbname()
+    db = await dict_session.create_db(dbname)
+    yield db
+    await dict_session.delete_db(dbname)

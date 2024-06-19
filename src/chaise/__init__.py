@@ -30,13 +30,30 @@ class DocumentRegistry:
 
     TYPE_KEY = ""
 
+    _docclasses = {}
+
+    def __init_sublcass__(cls):
+        cls._docclasses = {}
+
+    @classmethod
+    def _get_class_from_name(cls, name: str) -> type:
+        return cls._docclasses[name]
+
+    @classmethod
+    def _get_name_from_class(cls, klass: type) -> str:
+        for name, kind in cls._docclasses.items():
+            if issubclass(klass, kind):  # In case of decorator shenanigans
+                return name
+
     @classmethod
     def document(cls, name: str):
         """
         Register a class as a loadable couch document.
         """
+        assert not isinstance(name, type)
 
         def _(klass: type):
+            cls._docclasses[name] = klass
             return klass
 
         return _
@@ -70,14 +87,14 @@ class DocumentRegistry:
 
     def loadj(self, blob):
         type = blob.pop(self.TYPE_KEY)
-        klass = ...(type)  # TODO: find class from type
+        klass = self._get_class_from_name(type)
         doc = self.load_doc(klass, blob)
         # TODO: Migrations
         return doc
 
     def dumpj(self, doc):
         blob = self.dump_doc(doc)
-        blob[self.TYPE_KEY] = ...  # TODO: Find type from class
+        blob[self.TYPE_KEY] = self._get_name_from_class(type(doc))
         return blob
 
 
