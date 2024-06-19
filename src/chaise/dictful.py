@@ -21,6 +21,9 @@ class Document(dict):
     revs_info: list | None = None
     revisions: dict | None = None
 
+    def __repr__(self):
+        return f"<{type(self).__name__} {self.id!r}@{self.rev!r} {' '.join(f'{k}={v!r}' for k,v in self.items())}>"
+
 
 class BasicLoader:
     """
