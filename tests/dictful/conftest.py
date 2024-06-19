@@ -26,3 +26,8 @@ async def basic_database(basic_pool, generate_dbname):
     await session._request("PUT", dbname)
     yield dbname
     await session._request("DELETE", dbname)
+
+
+@pytest.fixture
+async def basic_session(basic_pool):
+    return await basic_pool.session()
