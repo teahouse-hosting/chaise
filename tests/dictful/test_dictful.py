@@ -91,8 +91,17 @@ async def test_conflicting_mutate(dict_database, dict_models):
     assert doc["count"] == 2
 
 
-async def test_migration(dict_database, dict_models):
-    start = dict_models.AncientFoo(bar="spam")
+async def test_migration2(dict_database, dict_models):
+    start = dict_models.OldFoo(bar="spam")
+    await dict_database.attempt_put(start, "test")
+
+    end = await dict_database.get("test")
+    assert isinstance(end, dict_models.Foo)
+    assert end["bar"] == "Spam"
+
+
+async def test_migration3(dict_database, dict_models):
+    start = dict_models.AncientFoo(bar="SPAM")
     await dict_database.attempt_put(start, "test")
 
     end = await dict_database.get("test")

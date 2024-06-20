@@ -55,18 +55,21 @@ class DictPool(chaise.SessionPool):
 def dict_models():
     @DictRegistry.document("Foo1")
     class AncientFoo(chaise.dictful.Document):
+        # spam is uppercase
         pass
 
     @DictRegistry.document("Foo2")
     class OldFoo(chaise.dictful.Document):
+        # spam is lowercase
         pass
 
     @DictRegistry.migration(AncientFoo, OldFoo)
     def foo1_migration(old):
-        return OldFoo(bar=old["bar"].upper())
+        return OldFoo(bar=old["bar"].lower())
 
     @DictRegistry.document("Foo3")
     class Foo(chaise.dictful.Document):
+        # spam is titlecase
         pass
 
     @DictRegistry.migration(OldFoo, Foo)
