@@ -92,7 +92,7 @@ async def test_conflicting_mutate(dict_database, dict_models):
 
 
 async def test_migration(dict_database, dict_models):
-    start = dict_models.OldFoo(bar="spam")
+    start = dict_models.AncientFoo(bar="spam")
     await dict_database.attempt_put(start, "test")
 
     end = await dict_database.get("test")

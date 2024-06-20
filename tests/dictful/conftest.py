@@ -54,15 +54,23 @@ class DictPool(chaise.SessionPool):
 @pytest.fixture(scope="session")
 def dict_models():
     @DictRegistry.document("Foo1")
-    class OldFoo(chaise.dictful.Document):
+    class AncientFoo(chaise.dictful.Document):
         pass
 
     @DictRegistry.document("Foo2")
+    class OldFoo(chaise.dictful.Document):
+        pass
+
+    @DictRegistry.migration(AncientFoo, OldFoo)
+    def foo1_migration(old):
+        return OldFoo(bar=old["bar"].upper())
+
+    @DictRegistry.document("Foo3")
     class Foo(chaise.dictful.Document):
         pass
 
     @DictRegistry.migration(OldFoo, Foo)
-    def foo_migration(old):
+    def foo2_migration(old):
         return Foo(bar=old["bar"].title())
 
     @DictRegistry.document("Counter")
@@ -71,6 +79,7 @@ def dict_models():
 
     return types.SimpleNamespace(
         Foo=Foo,
+        AncientFoo=AncientFoo,
         OldFoo=OldFoo,
         Counter=Counter,
     )
