@@ -55,6 +55,7 @@ class DocumentRegistry:
         Register a class as a loadable couch document.
         """
         assert not isinstance(name, type)
+        assert name not in cls._docclasses
 
         def _(klass: type):
             cls._docclasses[name] = klass
@@ -95,11 +96,18 @@ class DocumentRegistry:
         """
         raise NotImplementedError
 
+    def _migrate(self, bname, doc):
+        while funcs := [f for b, _, f in self._migrations if b == bname]:
+            (func,) = funcs
+            doc = func(doc)
+            bname = self._get_name_from_class(type(doc))
+        return doc
+
     def loadj(self, blob):
         type = blob.pop(self.TYPE_KEY)
         klass = self._get_class_from_name(type)
         doc = self.load_doc(klass, blob)
-        # TODO: Migrations
+        doc = self._migrate(type, doc)
         return doc
 
     def dumpj(self, doc):
