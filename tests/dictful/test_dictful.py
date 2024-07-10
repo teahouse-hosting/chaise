@@ -20,6 +20,7 @@ async def test_put(dict_database, dict_models):
 
     doc2 = await dict_database.get("test")
 
+    assert isinstance(doc2, dict_models.Foo)
     assert dict(doc) == dict(doc2)
     assert isinstance(doc2, dict_models.Foo)
 
