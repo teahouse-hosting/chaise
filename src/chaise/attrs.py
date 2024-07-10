@@ -4,6 +4,7 @@ Integration for attrs/cattrs
 
 from typing import AbstractSet
 
+import attrs
 from cattrs.converters import Converter
 
 try:
@@ -29,6 +30,22 @@ configure_converter(converter)
 
 
 class AttrsRegistry(DocumentRegistry):
+    @classmethod
+    def document(cls, name: str, /, **flags):
+        """
+        Registers a class as a document of the given type.
+
+        Passes it through :func:`attrs.define`
+        """
+        func = super().document(name)
+
+        def _(klass: type):
+            # Disable slots so chaise can attach extra data
+            klass = attrs.mutable(klass, slots=False, **flags)
+            return func(klass)
+
+        return _
+
     def load_doc(self, cls: type, blob: dict):
         return converter.structure(blob, cls)
 
