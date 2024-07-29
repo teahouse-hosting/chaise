@@ -20,4 +20,5 @@ repos:
     rev: '1.8.3'
     hooks:
     -   id: poetry-check
-    -   id: poetry-lock
+# Causes problems in CI, https://github.com/teahouse-hosting/chaise/issues/4
+#    -   id: poetry-lock
