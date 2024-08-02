@@ -3,6 +3,7 @@ CouchDB management tool
 """
 
 import argparse
+import anyio
 import logging
 
 from .datafiles import find_dbs
@@ -39,7 +40,7 @@ def _arg_parser():
     return parser
 
 
-def main():
+async def main():
     args = _arg_parser().parse_args()
 
     logging.basicConfig(
@@ -50,5 +51,9 @@ def main():
     args.func(args)
 
 
+def entry():
+    anyio.run(main)
+
+
 if __name__ == "__main__":
-    main()
+    entry()

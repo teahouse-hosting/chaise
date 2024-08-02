@@ -24,7 +24,7 @@ cattrs = "^23.2.3"
 attrs = ["attrs", "cattrs"]
 
 [tool.poetry.scripts]
-chaise = 'chaise.cli:main'
+chaise = 'chaise.cli:entry'
 
 [build-system]
 requires = ["poetry-core"]
