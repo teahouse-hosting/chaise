@@ -5,12 +5,16 @@ CouchDB management tool
 import argparse
 import logging
 
+from .datafiles import find_dbs
+
 
 def apply(args):
     """
     Apply the given database descriptions
     """
     print("TODO: apply")
+    for db in find_dbs(args.module):
+        print(db.name)
 
 
 def _arg_parser():
@@ -21,12 +25,16 @@ def _arg_parser():
     parser.add_argument(
         "--verbose", action="store_true", help="Enable verbose logging."
     )
+    parser.add_argument(
+        "--server", metavar="URL", help="Server URL to use (or $COUCHDB_URL)"
+    )
     parser.set_defaults(func=lambda args: parser.print_usage())
 
     subparsers = parser.add_subparsers(title="Subcommands")
 
     applyp = subparsers.add_parser("apply", help=apply.__doc__)
     applyp.set_defaults(func=apply)
+    applyp.add_argument("module")
 
     return parser
 
