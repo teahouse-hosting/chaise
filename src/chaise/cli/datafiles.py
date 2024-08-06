@@ -44,6 +44,8 @@ class DeclaredDB:
 
 def find_dbs(anchor) -> Iterable[DeclaredDB]:
     for path, t in walk(anchor):
+        # Traversable is a subset of pathlib.Path--it exludes most of the name
+        # manipulation features
         parent, base = posixpath.split(path)
         stem, ext = posixpath.splitext(base)
         if stem == "__db__":

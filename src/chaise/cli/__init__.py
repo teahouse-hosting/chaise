@@ -5,20 +5,34 @@ CouchDB management tool
 import argparse
 import anyio
 import logging
+import os
 
+from .. import Missing
 from .datafiles import find_dbs
+from .client import ConstantPool
 
 
-def apply(args):
+async def apply(args):
     """
     Apply the given database descriptions
     """
-    print("TODO: apply")
+    session = await ConstantPool(args.server).session()
+
+    # Ensure all the dbs exist
     for db in find_dbs(args.module):
-        print(db.name)
+        try:
+            await session.get_db(db.name)
+        except Missing:
+            print(f"Creating {db.name}...")  # TODO: Logging
+            await session.create_db(db.name)
+        else:
+            print(f"{db.name} exists")
 
 
 def _arg_parser():
+    async def usage():
+        parser.print_usage()
+
     parser = argparse.ArgumentParser(
         prog="chaise",
         description=__doc__,
@@ -27,9 +41,12 @@ def _arg_parser():
         "--verbose", action="store_true", help="Enable verbose logging."
     )
     parser.add_argument(
-        "--server", metavar="URL", help="Server URL to use (or $COUCHDB_URL)"
+        "--server",
+        metavar="URL",
+        help="Server URL to use (or $COUCHDB_URL)",
+        default=...,
     )
-    parser.set_defaults(func=lambda args: parser.print_usage())
+    parser.set_defaults(func=usage)
 
     subparsers = parser.add_subparsers(title="Subcommands")
 
@@ -43,17 +60,18 @@ def _arg_parser():
 async def main():
     args = _arg_parser().parse_args()
 
+    if args.server is ...:
+        args.server = os.environ.get("COUCHDB_URL", None)
+    elif not args.server:
+        args.server = None
+
     logging.basicConfig(
         level=logging.INFO if args.verbose else logging.WARNING,
         format="%(name)s %(levelname)s %(message)s",
     )
 
-    args.func(args)
+    await args.func(args)
 
 
 def entry():
     anyio.run(main)
-
-
-if __name__ == "__main__":
-    entry()
