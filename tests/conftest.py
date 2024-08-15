@@ -1,6 +1,7 @@
 import os
 import random
 import subprocess
+import sys
 
 import anyio
 import httpx
@@ -62,3 +63,18 @@ def generate_dbname():
         )
 
     return generate_dbname
+
+
+@pytest.fixture
+async def cli(couch_url):
+    async def call(*argv):
+        oldargv = sys.argv
+        try:
+            sys.argv = ["chaise", "--verbose", "--server", couch_url, *argv]
+            import chaise.cli
+
+            await chaise.cli.main()
+        finally:
+            sys.argv = oldargv
+
+    return call
