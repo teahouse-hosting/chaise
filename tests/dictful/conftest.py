@@ -6,7 +6,7 @@ import chaise.dictful
 import chaise.helpers
 
 
-class ConstantPool(chaise.helpers.ConstantPool, chaise.dictful.BasicPool):
+class ConstantPool(chaise.helpers.ConstantPoolMixin, chaise.dictful.BasicPool):
     pass
 
 
@@ -36,7 +36,7 @@ class DictSession(chaise.CouchSession):
     loader = DictRegistry
 
 
-class DictPool(chaise.helpers.ConstantPool, chaise.SessionPool):
+class DictPool(chaise.helpers.ConstantPoolMixin, chaise.SessionPool):
     session_class = DictSession
 
 

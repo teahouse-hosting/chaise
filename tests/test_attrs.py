@@ -16,7 +16,7 @@ class AttrsSession(chaise.CouchSession):
     loader = AttrsRegistry
 
 
-class AttrsPool(chaise.helpers.ConstantPool, chaise.SessionPool):
+class AttrsPool(chaise.helpers.ConstantPoolMixin, chaise.SessionPool):
     session_class = AttrsSession
 
 
