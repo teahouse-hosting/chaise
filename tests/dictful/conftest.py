@@ -3,15 +3,11 @@ import types
 import pytest
 
 import chaise.dictful
+import chaise.helpers
 
 
-class ConstantPool(chaise.dictful.BasicPool):
-    def __init__(self, url: str):
-        self.url = url
-        super().__init__()
-
-    async def iter_servers(self):
-        yield self.url
+class ConstantPool(chaise.helpers.ConstantPool, chaise.dictful.BasicPool):
+    pass
 
 
 @pytest.fixture
@@ -40,15 +36,8 @@ class DictSession(chaise.CouchSession):
     loader = DictRegistry
 
 
-class DictPool(chaise.SessionPool):
+class DictPool(chaise.helpers.ConstantPool, chaise.SessionPool):
     session_class = DictSession
-
-    def __init__(self, url: str):
-        self.url = url
-        super().__init__()
-
-    async def iter_servers(self):
-        yield self.url
 
 
 @pytest.fixture(scope="session")
