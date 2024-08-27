@@ -160,6 +160,8 @@ class CouchSession:
         for key, value in params.items():
             if value is None:
                 continue
+            elif isinstance(value, str):
+                rv[key] = value
             else:
                 rv[key] = json.dumps(value)
         return rv
@@ -410,7 +412,7 @@ class Database:
         blob = resp.json()
         for ref in blob["rows"]:
             if "doc" in ref:
-                doc = self._blob2doc(blob["doc"], self._name, ref["id"])
+                doc = self._blob2doc(ref["doc"], self._name, ref["id"])
             else:
                 doc = None
             yield structs.AllDocs_DocRef(
