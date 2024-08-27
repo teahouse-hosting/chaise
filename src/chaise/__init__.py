@@ -223,6 +223,11 @@ class CouchSession:
         """
         await self._request("DELETE", dbname)
 
+    async def iter_dbs(self) -> AsyncIterator[str]:
+        resp = await self._request("GET", "_all_dbs")
+        for dbname in resp.json():
+            yield dbname
+
     # TODO: Database metadata
 
 
