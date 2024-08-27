@@ -3,6 +3,8 @@ from typing import AsyncIterator, Literal, Callable, Protocol, TypeVar, Generic
 
 import httpx
 
+from . import structs
+
 
 DOCT = TypeVar("DOCT")
 
@@ -236,7 +238,11 @@ class Database:
         self._session = session
         self._name = name
 
-    def _blob2doc(self, blob, db, docid, etag):
+    def _blob2doc(self, blob, db, docid, etag=...):
+        if docid is ...:
+            docid = blob["_id"]
+        if etag is ...:
+            etag = f'"{blob["_rev"]}"'
         doc = self._session.loader().loadj(blob)
         doc.__db = db
         doc.__docid = docid
@@ -376,6 +382,40 @@ class Database:
                 doc = await self.get(docid)
             else:
                 break
+
+    async def iter_all_docs(
+        self, include_docs: bool = False
+    ) -> AsyncIterator[structs.AllDocs_DocRef]:
+        """
+        List all documents
+
+        TODO: More params
+
+        Args:
+            include_docs: Pre-load documents
+
+        https://docs.couchdb.org/en/stable/api/database/bulk-api.html#get--db-_all_docs
+        """
+        resp = await self._session._request(
+            "GET",
+            self._name,
+            "_all_docs",
+            params={
+                "include_docs": include_docs,
+            },
+            headers={
+                "Accept": "application/json",
+            },
+        )
+        blob = resp.json()
+        for ref in blob["rows"]:
+            if "doc" in ref:
+                doc = self._blob2doc(blob["doc"], self._name, ref["id"])
+            else:
+                doc = None
+            yield structs.AllDocs_DocRef(
+                _db=self, docid=ref["id"], rev=ref["value"]["rev"], _doc=doc
+            )
 
     # TODO: Mango searches
     # TODO: Database operations
