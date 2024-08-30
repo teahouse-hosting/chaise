@@ -11,4 +11,9 @@ prescribe which one of these (or others) you use, but it may have opinions about
 how you use them (eg, frozen instances are unsupported).
 
 To this end, :class:`~chaise.DocumentRegistry` handles type taging through the
-:meth:`~chaise.DocumentRegistry.document` decorator.
+:meth:`~chaise.DocumentRegistry.document` decorator. (The passed name is the
+type tag stored.)
+
+This means that you can have distinct document classes with methods and schema,
+without needing to write individual serializers (see :ref:`integrations` for
+details on that).
