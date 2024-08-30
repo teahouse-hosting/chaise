@@ -20,6 +20,16 @@ pytest-cov = "^5.0.0"
 attrs = ">=23.2,<25.0"
 cattrs = "^23.2.3"
 
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^8.0.2"
+furo = "^2024.8.6"
+sphinxext-opengraph = "^0.9.1"
+sphinx-inline-tabs = "^2023.4.21"
+sphinx-autobuild = "^2024.4.16"
+sphinx-copybutton = "^0.5.2"
+sphinxcontrib-httpdomain = "^1.8.1"
+
 [tool.poetry.extras]
 attrs = ["attrs", "cattrs"]
 
