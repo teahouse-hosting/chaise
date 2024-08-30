@@ -209,16 +209,25 @@ class CouchSession:
     ) -> "Database":
         """
         Create a database
+
+        https://docs.couchdb.org/en/stable/api/database/common.html#put--db
         """
-        await self._request(
-            "PUT",
-            dbname,
-            params={
-                "q": shards,
-                "n": replicas,
-                partitioned: partitioned,
-            },
-        )
+        try:
+            await self._request(
+                "PUT",
+                dbname,
+                params={
+                    "q": shards,
+                    "n": replicas,
+                    "partitioned": partitioned,
+                },
+            )
+        except httpx.HTTPStatusError as exc:
+            match exc.response.status_code:
+                case 412:
+                    raise Conflict("Database already exists") from exc
+                case _:
+                    raise
         return Database(self, dbname)
 
     async def delete_db(self, dbname: str):
