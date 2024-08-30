@@ -1,5 +1,7 @@
-Guides
-======
+.. _integrations:
+
+Integrations
+============
 
 Chaise encapsulates several nuanced concepts, so let's talk about them.
 
@@ -7,7 +9,7 @@ Chaise encapsulates several nuanced concepts, so let's talk about them.
    :maxdepth: 2
    :caption: Contents:
 
-   pooling
-   types
-   migrations
-   integrations/index
+   basic
+   dictful
+   attrs
+   pydantic

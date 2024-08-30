@@ -1,5 +1,5 @@
-Core Classes
-============
+``chaise``
+==========
 
 .. automodule:: chaise
    :members:

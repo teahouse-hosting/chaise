@@ -1,5 +1,5 @@
-Helpers
-============
+``chaise.helpers``
+==================
 
 .. automodule:: chaise.helpers
    :members:

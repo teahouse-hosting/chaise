@@ -10,3 +10,5 @@ Detailed API descriptions
 
    core
    helpers
+   dictful
+   attrs
