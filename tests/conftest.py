@@ -55,7 +55,7 @@ def _couch_url():
 async def couch_url(_couch_url):
     url = httpx.URL(_couch_url).join("_up")
     client = httpx.AsyncClient()
-    for _ in range(50):
+    for _ in range(600):
         try:
             resp = await client.get(url)
         except httpx.RequestError:
