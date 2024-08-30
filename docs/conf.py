@@ -23,6 +23,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinxcontrib.httpdomain",
     "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.todo",
 ]
 
 templates_path = ["_templates"]

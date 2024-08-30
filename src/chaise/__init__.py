@@ -8,6 +8,11 @@ DOCT = TypeVar("DOCT")
 
 
 class DocumentLoader(Protocol, Generic[DOCT]):
+    """
+    Protocol for things that go between JSON blobs and hydrated document
+    instances.
+    """
+
     def loadj(self, blob: dict) -> DOCT:
         """
         Convert a JSON blob into a document object.
@@ -25,7 +30,7 @@ class DocumentRegistry:
 
     Default loader implementation.
 
-    Must subclass.
+    Do not use directly. You probably want one of the :ref:`integrations`.
     """
 
     TYPE_KEY = ""
@@ -53,6 +58,13 @@ class DocumentRegistry:
     def document(cls, name: str):
         """
         Register a class as a loadable couch document.
+
+        Args:
+            name: The type identifier to save to CouchDB
+
+        .. note::
+
+           The given name must be globally unique and must never change.
         """
         assert not isinstance(name, type)
         assert name not in cls._docclasses
@@ -141,11 +153,18 @@ class Deleted(Exception):
 class CouchSession:
     """
     A connection to CouchDB.
+
+    You probably want to override like::
+
+        class MySession(CouchSession):
+            loader = MyRegistry
+
     """
 
     _client: httpx.AsyncClient
     _root: httpx.URL
 
+    #: Class responsible for de/serializing data.
     loader: type[DocumentLoader]
 
     def __init__(self, client: httpx.AsyncClient, root: httpx.URL):
@@ -191,6 +210,8 @@ class CouchSession:
     async def get_db(self, dbname: str) -> "Database":
         """
         Gets a database. Checks if it exists.
+
+        See :http:head:`/{db}`
         """
         await self._request("HEAD", dbname)
         return Database(self, dbname)
@@ -205,6 +226,8 @@ class CouchSession:
     ) -> "Database":
         """
         Create a database
+
+        See :http:post:`/{db}`
         """
         await self._request(
             "PUT",
@@ -220,6 +243,8 @@ class CouchSession:
     async def delete_db(self, dbname: str):
         """
         Delete a database.
+
+        See :http:delete:`/{db}`
         """
         await self._request("DELETE", dbname)
 
@@ -227,7 +252,14 @@ class CouchSession:
 
 
 class Database:
+    """
+    An individual database.
+    """
+
     def __init__(self, session, name):
+        """
+        :private:
+        """
         self._session = session
         self._name = name
 
@@ -267,7 +299,7 @@ class Database:
         """
         Get a document
 
-        https://docs.couchdb.org/en/stable/api/document/common.html#get--db-docid
+        See :http:get:`/{db}/{docid}`
         """
         resp = await self._session._request(
             "GET",
@@ -315,7 +347,7 @@ class Database:
 
         db and docid only need to be given if it's a new document.
 
-        https://docs.couchdb.org/en/stable/api/document/common.html#put--db-docid
+        See :http:put:`/{db}/{docid}`
         """
         blob, _db, _docid, etag = self._doc2blob(doc)
         assert _db is None or _db == self._name
@@ -332,7 +364,7 @@ class Database:
         """
         Delete a document
 
-        https://docs.couchdb.org/en/stable/api/document/common.html#delete--db-docid
+        See :http:delete:`/{db}/{docid}`
         """
         _, db, docid, etag = self._doc2blob(doc)
         assert db == self._name
@@ -349,7 +381,11 @@ class Database:
         """
         Copy a document
 
-        https://docs.couchdb.org/en/stable/api/document/common.html#copy--db-docid
+        .. todo::
+
+           Implement
+
+        See :http:copy:`/{db}/{docid}`
         """
         # FIXME: Figure out signature
 
@@ -357,7 +393,7 @@ class Database:
         """
         A document mutation loop::
 
-            async for doc in couch.mutate_doc("spam", "eggs"):
+            async for doc in couch.mutate_doc("spam"):
                 doc.foo = "bar"
 
         Will replay the mutation until it goes through.
@@ -378,7 +414,12 @@ class Database:
 
 class SessionPool:
     """
-    Responsible for giving out Couch connections
+    Responsible for giving out Couch connections.
+
+    You probably want to override like::
+
+        class MyPool(SessionPool):
+            session_class = MySession
     """
 
     _client: httpx.AsyncClient
