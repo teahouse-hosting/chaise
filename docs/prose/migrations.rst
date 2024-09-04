@@ -3,7 +3,7 @@
 Document Migrations
 ===================
 
-Ok, so, you're going along, you're extending you're app, you're writing
+Ok, so, you're going along, you're extending your app, you're writing
 documents, making use of :ref:`types`. But eventually it happens: you need to
 make a breaking change.
 
