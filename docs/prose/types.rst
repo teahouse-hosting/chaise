@@ -10,7 +10,7 @@ a number of struct libraries have sprung up in the ecosystem, like
 prescribe which one of these (or others) you use, but it may have opinions about
 how you use them (eg, frozen instances are unsupported).
 
-To this end, :class:`~chaise.DocumentRegistry` handles type taging through the
+To this end, :class:`~chaise.DocumentRegistry` handles type tagging through the
 :meth:`~chaise.DocumentRegistry.document` decorator. (The passed name is the
 type tag stored.)
 
