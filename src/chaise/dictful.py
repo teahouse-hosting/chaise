@@ -1,24 +1,46 @@
 """
 A basic version of chaise that just uses enriched dictionaries as the documents.
 
-BasicLoader, BasicSession, and BasicPool do not do any migration handling.
+:class:`BasicLoader`, :class:`BasicSession`, and :class:`BasicPool` do not do
+any migration handling.
 
-DictRegistry should be paired with CouchSession and SessionPool if you want some
-basic document type handling.
+:class:`DictRegistry` should be paired with :class:`~chaise.CouchSession` and
+:class:`~chaise.SessionPool` if you want some basic document type handling.
 """
 
 from . import DocumentRegistry, CouchSession, SessionPool
 
 
 class Document(dict):
+    """
+    A dictionary with some CouchDB attributes
+    """
+
+    #: Document ID
     id: str | None = None
+
+    #: Document revision
     rev: str | None = None
+
+    #: Has the document been deleted? (ie, is this a tombstone?)
     deleted: bool = False
+
+    #: Attachment information, if requested
     attachments: dict | None = None
+
+    #: List of conflicts, if requested
     conflicts: list | None = None
+
+    # List of deleted conflicts, if requested
     deleted_conflicts: list | None = None
+
+    #:
     local_seq: str | None = None
+
+    #:
     revs_info: list | None = None
+
+    #:
     revisions: dict | None = None
 
     def __repr__(self):
@@ -68,7 +90,13 @@ class DictRegistry(DocumentRegistry):
     _loader = BasicLoader()
 
     def load_doc(self, cls: type[Document], blob: dict) -> Document:
+        """
+        Load a document
+        """
         return self._loader.loadj(blob, _kind=cls)
 
     def dump_doc(self, doc: Document) -> dict:
+        """
+        Save a document
+        """
         return self._loader.dumpj(doc)
