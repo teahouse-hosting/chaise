@@ -1,6 +1,6 @@
 # Show this help
 @help:
-  just --list
+  just --list --list-submodules
 
 # Set up dev environments
 install:
@@ -14,3 +14,5 @@ hooks:
 # Run the tests
 test *ARGS:
   poetry run pytest {{ARGS}}
+
+mod docs

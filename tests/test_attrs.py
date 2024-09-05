@@ -5,6 +5,7 @@ import pytest
 
 import chaise
 import chaise.attrs
+import chaise.helpers
 
 
 class AttrsRegistry(chaise.attrs.AttrsRegistry):
@@ -15,15 +16,8 @@ class AttrsSession(chaise.CouchSession):
     loader = AttrsRegistry
 
 
-class AttrsPool(chaise.SessionPool):
+class AttrsPool(chaise.helpers.ConstantPoolMixin, chaise.SessionPool):
     session_class = AttrsSession
-
-    def __init__(self, url: str):
-        self.url = url
-        super().__init__()
-
-    async def iter_servers(self):
-        yield self.url
 
 
 @pytest.fixture(scope="session")

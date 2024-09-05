@@ -21,6 +21,7 @@ from . import DocumentRegistry
 # All implementations exhibit the conversions:
 # * bytes are wrapped in base85
 # * dates & datetimes are ISO 8601
+#: The converter used when talking to CouchDB.
 converter = Converter(
     unstruct_collection_overrides={
         AbstractSet: list,
