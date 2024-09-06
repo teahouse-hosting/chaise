@@ -76,6 +76,28 @@ async def test_roundrobin(monkeypatch):
                 "",
                 ("2607:f8b0:4009:808::200e", 0, 0, 0),
             ),
+            # AnyIO returns 2-tuple addresses for IPv6
+            (
+                AddressFamily.AF_INET6,
+                SocketKind.SOCK_STREAM,
+                6,
+                "",
+                ("fdaa:a:d05:0:1::2", 0),
+            ),
+            (
+                AddressFamily.AF_INET6,
+                SocketKind.SOCK_DGRAM,
+                17,
+                "",
+                ("fdaa:a:d05:0:1::2", 0),
+            ),
+            (
+                AddressFamily.AF_INET6,
+                SocketKind.SOCK_RAW,
+                0,
+                "",
+                ("fdaa:a:d05:0:1::2", 0),
+            ),
         ]
 
     monkeypatch.setattr(anyio, "getaddrinfo", getaddrinfo)
@@ -90,4 +112,5 @@ async def test_roundrobin(monkeypatch):
     assert servers == {
         "http://142.250.191.238:5984/",
         "http://[2607:f8b0:4009:808::200e]:5984/",
+        "http://[fdaa:a:d05:0:1::2]:5984/",
     }
