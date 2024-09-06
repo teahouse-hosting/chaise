@@ -15,4 +15,10 @@ hooks:
 test *ARGS:
   poetry run pytest {{ARGS}}
 
+# Clean up stuff
+clean:
+  just docs/clean
+  poetry env remove --all
+  rm -r .*_cache
+
 mod docs
