@@ -260,6 +260,11 @@ class CouchSession:
         await self._request("DELETE", dbname)
 
     async def iter_dbs(self) -> AsyncIterator[str]:
+        """
+        List all databases
+
+        See :http:get:`/_all_dbs`
+        """
         resp = await self._request("GET", "_all_dbs")
         for dbname in resp.json():
             yield dbname
@@ -439,7 +444,7 @@ class Database:
         Args:
             include_docs: Pre-load documents
 
-        https://docs.couchdb.org/en/stable/api/database/bulk-api.html#get--db-_all_docs
+        See :http:get:`/{db}/_all_docs`
         """
         resp = await self._session._request(
             "GET",
