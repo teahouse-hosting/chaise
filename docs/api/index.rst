@@ -12,3 +12,4 @@ Detailed API descriptions
    helpers
    dictful
    attrs
+   structs

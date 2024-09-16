@@ -46,6 +46,14 @@ async def _get_ips(hostname: str | bytes, port: int | None = None):
                 SocketKind.SOCK_STREAM,
                 _,
                 _,
+                (addr, _),
+            ):
+                yield addr
+            case (
+                AddressFamily.AF_INET6,
+                SocketKind.SOCK_STREAM,
+                _,
+                _,
                 (addr, _, _, scope),
             ):
                 # IPv6 flow is without purpose and cannot be represented in addresses

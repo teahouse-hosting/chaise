@@ -3,6 +3,8 @@ from typing import AsyncIterator, Literal, Callable, Protocol, TypeVar, Generic
 
 import httpx
 
+from . import structs
+
 
 DOCT = TypeVar("DOCT")
 
@@ -177,6 +179,8 @@ class CouchSession:
         for key, value in params.items():
             if value is None:
                 continue
+            elif isinstance(value, str):
+                rv[key] = value
             else:
                 rv[key] = json.dumps(value)
         return rv
@@ -229,15 +233,22 @@ class CouchSession:
 
         See :http:post:`/{db}`
         """
-        await self._request(
-            "PUT",
-            dbname,
-            params={
-                "q": shards,
-                "n": replicas,
-                partitioned: partitioned,
-            },
-        )
+        try:
+            await self._request(
+                "PUT",
+                dbname,
+                params={
+                    "q": shards,
+                    "n": replicas,
+                    "partitioned": partitioned,
+                },
+            )
+        except httpx.HTTPStatusError as exc:
+            match exc.response.status_code:
+                case 412:
+                    raise Conflict("Database already exists") from exc
+                case _:
+                    raise
         return Database(self, dbname)
 
     async def delete_db(self, dbname: str):
@@ -247,6 +258,16 @@ class CouchSession:
         See :http:delete:`/{db}`
         """
         await self._request("DELETE", dbname)
+
+    async def iter_dbs(self) -> AsyncIterator[str]:
+        """
+        List all databases
+
+        See :http:get:`/_all_dbs`
+        """
+        resp = await self._request("GET", "_all_dbs")
+        for dbname in resp.json():
+            yield dbname
 
     # TODO: Database metadata
 
@@ -263,7 +284,11 @@ class Database:
         self._session = session
         self._name = name
 
-    def _blob2doc(self, blob, db, docid, etag):
+    def _blob2doc(self, blob, db, docid, etag=...):
+        if docid is ...:
+            docid = blob["_id"]
+        if etag is ...:
+            etag = f'"{blob["_rev"]}"'
         doc = self._session.loader().loadj(blob)
         doc.__db = db
         doc.__docid = docid
@@ -407,6 +432,40 @@ class Database:
                 doc = await self.get(docid)
             else:
                 break
+
+    async def iter_all_docs(
+        self, include_docs: bool = False
+    ) -> AsyncIterator[structs.AllDocs_DocRef]:
+        """
+        List all documents
+
+        TODO: More params
+
+        Args:
+            include_docs: Pre-load documents
+
+        See :http:get:`/{db}/_all_docs`
+        """
+        resp = await self._session._request(
+            "GET",
+            self._name,
+            "_all_docs",
+            params={
+                "include_docs": include_docs,
+            },
+            headers={
+                "Accept": "application/json",
+            },
+        )
+        blob = resp.json()
+        for ref in blob["rows"]:
+            if "doc" in ref:
+                doc = self._blob2doc(ref["doc"], self._name, ref["id"])
+            else:
+                doc = None
+            yield structs.AllDocs_DocRef(
+                _db=self, docid=ref["id"], rev=ref["value"]["rev"], _doc=doc
+            )
 
     # TODO: Mango searches
     # TODO: Database operations

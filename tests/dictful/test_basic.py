@@ -89,3 +89,36 @@ async def test_conflicting_mutate(basic_database):
 
     doc = await basic_database.get("test")
     assert doc["count"] == 2
+
+
+async def test_all_docs(basic_database):
+    """
+    Test that we can get all docs
+    """
+    doc = Document(spam="eggs")
+    await basic_database.attempt_put(doc, "test")
+
+    all_docs = []
+    async for ref in basic_database.iter_all_docs():
+        all_docs.append(ref)
+
+    assert len(all_docs) == 1
+    assert ref.docid == "test"
+    assert await ref.doc() == doc
+
+
+async def test_all_docs_include(basic_database):
+    """
+    Test that we can get all docs, and include the docs
+    """
+    doc = Document(spam="eggs")
+    await basic_database.attempt_put(doc, "test")
+
+    all_docs = []
+    async for ref in basic_database.iter_all_docs(include_docs=True):
+        all_docs.append(ref)
+
+    assert len(all_docs) == 1
+    assert ref.docid == "test"
+    assert ref._doc is not None
+    assert await ref.doc() == doc
