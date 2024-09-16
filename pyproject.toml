@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "chaise"
-version = "0.4.0"
+version = "0.5.0"
 description = "An async Python client for CouchDB"
 authors = ["Jamie Bliss <jamie@ivyleav.es>"]
 license = "Artistic-2.0"
