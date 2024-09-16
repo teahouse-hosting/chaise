@@ -30,7 +30,7 @@ async def apply(args):
 
 
 def _arg_parser():
-    async def usage():
+    async def usage(args):
         parser.print_usage()
 
     parser = argparse.ArgumentParser(
