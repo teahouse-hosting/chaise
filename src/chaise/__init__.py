@@ -369,30 +369,24 @@ class Database:
 
     # TODO: Attachments
 
-    async def find_one(self, selector: typing.Mapping, use_index: str | list[str] | None = None):
+    async def find_one(
+        self, selector: typing.Mapping, use_index: str | list[str] | None = None
+    ):
         """
         Get a single document based on ``selector``.
 
         See :http:post:`/{db}/_find`
         """
-        json_body = {
-            "selector": selector,
-            "limit": 2
-        }
+        json_body = {"selector": selector, "limit": 2}
 
         if use_index is not None:
             json_body |= {"use_index": use_index}
 
-        resp = await self._session._request(
-            "POST",
-            self._name,
-            "_find",
-            json=json_body
-        )
+        resp = await self._session._request("POST", self._name, "_find", json=json_body)
 
         blob = resp.json()
         results = blob.get("docs")
-        match (len(results)):
+        match len(results):
             case 0:
                 raise Missing("No results found.")
             case 1:
