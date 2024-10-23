@@ -1,4 +1,5 @@
 import json
+import typing
 from typing import AsyncIterator, Literal, Callable, Protocol, TypeVar, Generic
 
 import httpx
@@ -149,6 +150,14 @@ class Deleted(Exception):
     Requested a deleted document.
 
     Note that this is a document with a tombstone, not a 404.
+    """
+
+
+class TooManyResults(Exception):
+    """
+    Requested a single document in a find operation and found more than one.
+
+    Note this is based on number of results. Request was successful.
     """
 
 
@@ -359,6 +368,37 @@ class Database:
         return doc
 
     # TODO: Attachments
+
+    async def find_one(self, selector: typing.Mapping, use_index: str | list[str] | None = None):
+        """
+        Get a single document based on ``selector``.
+
+        See :http:post:`/{db}/_find`
+        """
+        json_body = {
+            "selector": selector,
+            "limit": 2
+        }
+
+        if use_index is not None:
+            json_body |= {"use_index": use_index}
+
+        resp = await self._session._request(
+            "POST",
+            self._name,
+            "_find",
+            json=json_body
+        )
+
+        blob = resp.json()
+        results = blob.get("docs")
+        match (len(results)):
+            case 0:
+                raise Missing("No results found.")
+            case 1:
+                return self._blob2doc(blob, self._name, ...)
+            case _:
+                raise TooManyResults("More than one result found.")
 
     async def attempt_put(
         self,
