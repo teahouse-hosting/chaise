@@ -396,7 +396,7 @@ class Database:
             case 0:
                 raise Missing("No results found.")
             case 1:
-                return self._blob2doc(blob, self._name, ...)
+                return self._blob2doc(results[0], self._name, ...)
             case _:
                 raise TooManyResults("More than one result found.")
 
