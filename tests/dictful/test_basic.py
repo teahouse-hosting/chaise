@@ -137,7 +137,7 @@ async def test_find_one(basic_database):
 
 async def test_find_one_missing(basic_database):
     with pytest.raises(chaise.Missing):
-        result_document = await basic_database.find_one({"email": "foo@example.com"})
+        await basic_database.find_one({"email": "foo@example.com"})
 
 
 async def test_find_one_too_many(basic_database):
@@ -146,6 +146,7 @@ async def test_find_one_too_many(basic_database):
     doc3 = Document(email="test3@example.com", password="use_the_force", feature=2)
     await basic_database.attempt_put(doc1, "test1")
     await basic_database.attempt_put(doc2, "test2")
+    await basic_database.attempt_put(doc3, "test3")
 
     with pytest.raises(chaise.TooManyResults):
-        result_document = await basic_database.find_one({"feature": 1})
+        await basic_database.find_one({"feature": 1})
