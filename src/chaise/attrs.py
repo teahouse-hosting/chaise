@@ -2,6 +2,7 @@
 Integration for attrs/cattrs
 """
 
+import typing
 from typing import AbstractSet
 
 import attrs
@@ -18,6 +19,81 @@ except ImportError:
 from . import DocumentRegistry
 
 
+class classprop:
+    """
+    Like @property, but for class attributes
+    """
+
+    def __init__(self, factory: typing.Callable[[type], typing.Any]):
+        self._factory = factory
+        self.__doc__ = factory.__doc__
+
+    def __get__(self, instance, owner):
+        return self._factory(owner)
+
+    def __set__(self, instance, value):
+        raise AttributeError("Cannot set a classprop")
+
+    def __set_name__(self, owner, name):
+        self.__objclass__ = owner
+
+
+class AttrsMeta(type):
+    """
+    Defines an attrs class as a subclass instead of a decorator
+    """
+
+    def __new__(cls, name, bases, dict, **kwds):
+        sub = super().__new__(cls, name, bases, dict)
+        sub = attrs.define(kwds)(sub)
+        return sub
+
+
+class Document(metaclass=AttrsMeta, slots=False, frozen=False):
+    __parent: typing.ClassVar[type | None] = None
+
+    #: Document ID
+    #: :meta public:
+    _id: str | None = attrs.Field(default=None, init=False)
+
+    #: Document revision
+    #: :meta public:
+    _rev: str | None = attrs.Field(default=None, init=False)
+
+    #: Has the document been deleted? (ie, is this a tombstone?)
+    #: :meta public:
+    _deleted: bool = attrs.Field(default=False, init=False)
+
+    #: Attachment information, if requested
+    #: :meta public:
+    _attachments: dict | None = attrs.Field(default=None, init=False)
+
+    #: List of conflicts, if requested
+    #: :meta public:
+    _conflicts: list | None = attrs.Field(default=None, init=False)
+
+    # List of deleted conflicts, if requested
+    #: :meta public:
+    _deleted_conflicts: list | None = attrs.Field(default=None, init=False)
+
+    #:
+    #: :meta public:
+    _local_seq: str | None = attrs.Field(default=None, init=False)
+
+    #:
+    #: :meta public:
+    _revs_info: list | None = attrs.Field(default=None, init=False)
+
+    #:
+    #: :meta public:
+    _revisions: dict | None = attrs.Field(default=None, init=False)
+
+    def __init_sublcass__(cls, /, dbid: str | None = None, **kwargs):
+        assert "slots" not in kwargs
+        if dbid is not None and cls.__parent is not None:
+            cls.__parent.document(dbid)(cls)
+
+
 # All implementations exhibit the conversions:
 # * bytes are wrapped in base85
 # * dates & datetimes are ISO 8601
@@ -31,21 +107,13 @@ configure_converter(converter)
 
 
 class AttrsRegistry(DocumentRegistry):
-    @classmethod
-    def document(cls, name: str, /, **flags):
-        """
-        Registers a class as a document of the given type.
+    @classprop
+    def Document(cls) -> type[Document]:
+        # This is some shenanigans because names
+        class Document(globals()["Document"]):
+            __parent = cls
 
-        Passes it through :func:`attrs.define`
-        """
-        func = super().document(name)
-
-        def _(klass: type):
-            # Disable slots so chaise can attach extra data
-            klass = attrs.mutable(klass, slots=False, **flags)
-            return func(klass)
-
-        return _
+        return Document
 
     def load_doc(self, cls: type, blob: dict):
         return converter.structure(blob, cls)
