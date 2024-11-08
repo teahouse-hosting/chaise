@@ -4,6 +4,7 @@ Integration for attrs/cattrs
 
 import typing
 from typing import AbstractSet
+import warnings
 
 import attrs
 from cattrs.converters import Converter
@@ -38,18 +39,27 @@ class classprop:
         self.__objclass__ = owner
 
 
-class AttrsMeta(type):
+class DocMeta(type):
     """
     Defines an attrs class as a subclass instead of a decorator
     """
 
     def __new__(cls, name, bases, dict, **kwds):
+        # print(cls, dict, bases)
         sub = super().__new__(cls, name, bases, dict)
-        sub = attrs.define(**kwds)(sub)
+        dbid = kwds.pop("dbid", None)
+        assert not kwds.get("slots", None)
+        if "__attrs_attrs__" not in dict:  # prevents recursion
+            sub = attrs.define(**kwds)(sub)
+            if sub.__module__ != globals()["__name__"] and dbid is None:
+                warnings.warn(f"No dbid given for {sub!r}")
+            if dbid is not None and sub._Document__parent is not None:
+                print(sub, dbid)
+                sub._Document__parent.document(dbid)(sub)
         return sub
 
 
-class Document(metaclass=AttrsMeta, slots=False, frozen=False):
+class Document(metaclass=DocMeta, slots=False, frozen=False):
     __parent: typing.ClassVar[type | None] = None
 
     #: Document ID
@@ -89,9 +99,7 @@ class Document(metaclass=AttrsMeta, slots=False, frozen=False):
     _revisions: dict | None = attrs.field(default=None, init=False)
 
     def __init_sublcass__(cls, /, dbid: str | None = None, **kwargs):
-        assert "slots" not in kwargs
-        if dbid is not None and cls.__parent is not None:
-            cls.__parent.document(dbid)(cls)
+        print(kwargs)
 
 
 # All implementations exhibit the conversions:
