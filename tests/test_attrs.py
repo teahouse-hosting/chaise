@@ -25,13 +25,11 @@ def attrs_models():
     AttrsRegistry._docclasses = {}
     AttrsRegistry._migrations = []
 
-    @AttrsRegistry.document("Foo1")
-    class AncientFoo:
+    class AncientFoo(AttrsRegistry.Document, dbid="Foo1"):
         # spam is uppercase
         bar: str
 
-    @AttrsRegistry.document("Foo2")
-    class OldFoo:
+    class OldFoo(AttrsRegistry.Document, dbid="Foo2"):
         # spam is lowercase
         bar: str
 
@@ -39,8 +37,7 @@ def attrs_models():
     def foo1_migration(old):
         return OldFoo(bar=old.bar.lower())
 
-    @AttrsRegistry.document("Foo3")
-    class Foo:
+    class Foo(AttrsRegistry.Document, dbid="Foo3"):
         # spam is titlecase
         spam: str
 
@@ -48,8 +45,7 @@ def attrs_models():
     def foo2_migration(old):
         return Foo(spam=old.bar.title())
 
-    @AttrsRegistry.document("Counter")
-    class Counter:
+    class Counter(AttrsRegistry.Document, dbid="Counter"):
         count: int
 
     return types.SimpleNamespace(
