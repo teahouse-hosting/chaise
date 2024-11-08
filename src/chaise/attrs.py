@@ -54,39 +54,39 @@ class Document(metaclass=AttrsMeta, slots=False, frozen=False):
 
     #: Document ID
     #: :meta public:
-    _id: str | None = attrs.Field(default=None, init=False)
+    _id: str | None = attrs.field(default=None, init=False)
 
     #: Document revision
     #: :meta public:
-    _rev: str | None = attrs.Field(default=None, init=False)
+    _rev: str | None = attrs.field(default=None, init=False)
 
     #: Has the document been deleted? (ie, is this a tombstone?)
     #: :meta public:
-    _deleted: bool = attrs.Field(default=False, init=False)
+    _deleted: bool = attrs.field(default=False, init=False)
 
     #: Attachment information, if requested
     #: :meta public:
-    _attachments: dict | None = attrs.Field(default=None, init=False)
+    _attachments: dict | None = attrs.field(default=None, init=False)
 
     #: List of conflicts, if requested
     #: :meta public:
-    _conflicts: list | None = attrs.Field(default=None, init=False)
+    _conflicts: list | None = attrs.field(default=None, init=False)
 
     # List of deleted conflicts, if requested
     #: :meta public:
-    _deleted_conflicts: list | None = attrs.Field(default=None, init=False)
+    _deleted_conflicts: list | None = attrs.field(default=None, init=False)
 
     #:
     #: :meta public:
-    _local_seq: str | None = attrs.Field(default=None, init=False)
+    _local_seq: str | None = attrs.field(default=None, init=False)
 
     #:
     #: :meta public:
-    _revs_info: list | None = attrs.Field(default=None, init=False)
+    _revs_info: list | None = attrs.field(default=None, init=False)
 
     #:
     #: :meta public:
-    _revisions: dict | None = attrs.Field(default=None, init=False)
+    _revisions: dict | None = attrs.field(default=None, init=False)
 
     def __init_sublcass__(cls, /, dbid: str | None = None, **kwargs):
         assert "slots" not in kwargs
