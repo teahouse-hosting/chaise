@@ -45,7 +45,7 @@ class AttrsMeta(type):
 
     def __new__(cls, name, bases, dict, **kwds):
         sub = super().__new__(cls, name, bases, dict)
-        sub = attrs.define(kwds)(sub)
+        sub = attrs.define(**kwds)(sub)
         return sub
 
 
