@@ -169,7 +169,7 @@ class AttrsRegistry(DocumentRegistry):
 
         # This is some shenanigans because names
         class Document(globals()["Document"]):
-            __doc__ = AttrsRegistry.Document.__doc__
+            __doc__ = vars(AttrsRegistry)["Document"].__doc__
             __parent = cls
 
         return Document
