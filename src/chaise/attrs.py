@@ -104,30 +104,36 @@ class Document(metaclass=DocMeta, slots=False, frozen=False):
     __parent: typing.ClassVar[type | None] = None
 
     #: Document ID
+    #:
     #: :meta public:
     _id: str | None = attrs.field(default=None, kw_only=True, alias="_id")
 
     #: Document revision
+    #:
     #: :meta public:
     _rev: str | None = attrs.field(default=None, kw_only=True, alias="_rev")
 
     #: Has the document been deleted? (ie, is this a tombstone?)
+    #:
     #: :meta public:
     _deleted: bool = attrs.field(default=False, kw_only=True, alias="_deleted")
 
     #: Attachment information, if requested
+    #:
     #: :meta public:
     _attachments: dict | None = attrs.field(
         default=None, kw_only=True, alias="_attachments"
     )
 
-    #: List of conflicts, if requested
+    #: List of alternate document versions, if requested
+    #:
     #: :meta public:
     _conflicts: list | None = attrs.field(
         default=None, kw_only=True, alias="_conflicts"
     )
 
-    # List of deleted conflicts, if requested
+    #: List of deleted conflicts, if requested
+    #:
     #: :meta public:
     _deleted_conflicts: list | None = attrs.field(
         default=None, kw_only=True, alias="_deleted_conflicts"
