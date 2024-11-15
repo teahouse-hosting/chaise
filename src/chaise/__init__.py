@@ -364,6 +364,19 @@ class Database:
         else:
             # Conflicts mode
             etag = f'"{blob["_rev"]}"'
+
+        # For some reason, requested fiels are omitted when empty
+        if attachments:
+            blob.setdefault("_attachments", {})
+        if conflicts:
+            blob.setdefault("_conflicts", [])
+        if deleted_conflicts:
+            blob.setdefault("_deleted_conflicts", [])
+        if revs:
+            blob.setdefault("_revisions", {})
+        if revs_info or open_revs:
+            blob.setdefault("_revisions", {})
+
         doc = self._blob2doc(blob, self._name, docid, etag)
         return doc
 
