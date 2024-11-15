@@ -36,6 +36,8 @@ configure_converter(converter)
 class classprop:
     """
     Like @property, but for class attributes
+
+    :meta private:
     """
 
     def __init__(self, factory: typing.Callable[[type], typing.Any]):
@@ -55,6 +57,8 @@ class classprop:
 class DocMeta(type):
     """
     Defines an attrs class as a subclass instead of a decorator
+
+    :meta private:
     """
 
     def __new__(cls, name, bases, dict, **kwds):
@@ -91,6 +95,12 @@ class DocMeta(type):
 
 
 class Document(metaclass=DocMeta, slots=False, frozen=False):
+    """
+    The parent class for all documents that get saved to Couch.
+
+    Do not inherit from directly; use :class:`AttrsRegistry.Document` instead.
+    """
+
     __parent: typing.ClassVar[type | None] = None
 
     #: Document ID
@@ -143,14 +153,35 @@ class Document(metaclass=DocMeta, slots=False, frozen=False):
 class AttrsRegistry(DocumentRegistry):
     @classprop
     def Document(cls) -> type[Document]:
+        """
+        Document superclass.
+
+        Handles:
+
+        * Making an attrs
+        * Registering with chaise
+        * Serialization concerns
+
+        Me sure to include the ``dbid`` keyword argument::
+
+           class MyDoc(AttrsRegistry.Document, dbid="mydoc"): ...
+        """
+
         # This is some shenanigans because names
         class Document(globals()["Document"]):
+            __doc__ = AttrsRegistry.Document.__doc__
             __parent = cls
 
         return Document
 
     def load_doc(self, cls: type, blob: dict):
+        """
+        :meta private:
+        """
         return converter.structure(blob, cls)
 
     def dump_doc(self, doc) -> dict:
+        """
+        :meta private:
+        """
         return converter.unstructure(doc)
