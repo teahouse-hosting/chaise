@@ -162,7 +162,7 @@ class TooManyResults(Exception):
     """
 
 
-class FindWarning(warnings.Warning):
+class FindWarning(UserWarning):
     """
     Warnings reported by the CouchDB _find endpoint.
     """
