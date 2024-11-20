@@ -15,7 +15,7 @@ except ImportError:
 # Omitting orjson, even though it's a preconf, because I'm not confident it's a
 # drop-in equivalent to (u)json
 
-from . import DocumentRegistry
+from . import DocumentRegistry, TypeIDType
 
 
 # All implementations exhibit the conversions:
@@ -32,7 +32,7 @@ configure_converter(converter)
 
 class AttrsRegistry(DocumentRegistry):
     @classmethod
-    def document(cls, name: str, /, **flags):
+    def document(cls, name: TypeIDType, /, **flags):
         """
         Registers a class as a document of the given type.
 

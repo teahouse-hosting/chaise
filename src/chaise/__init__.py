@@ -9,6 +9,12 @@ from . import structs
 
 DOCT = TypeVar("DOCT")
 
+# 3.12: type TypeIDType = ...
+# Technically, anything JSONable is allowable, but only allowing atomic types
+# makes a bunch of reasoning easier.
+#: The type of class identifiers
+TypeIDType = str | int | bool | None
+
 
 class DocumentLoader(Protocol, Generic[DOCT]):
     """
@@ -46,11 +52,11 @@ class DocumentRegistry:
         cls._migrations = []
 
     @classmethod
-    def _get_class_from_name(cls, name: str) -> type:
+    def _get_class_from_name(cls, name: TypeIDType) -> type:
         return cls._docclasses[name]
 
     @classmethod
-    def _get_name_from_class(cls, klass: type) -> str:
+    def _get_name_from_class(cls, klass: type) -> TypeIDType:
         for name, kind in cls._docclasses.items():
             if issubclass(klass, kind):  # In case of decorator shenanigans
                 return name
@@ -58,7 +64,7 @@ class DocumentRegistry:
             raise ValueError(f"Couldn't find name for {klass}")
 
     @classmethod
-    def document(cls, name: str):
+    def document(cls, name: TypeIDType):
         """
         Register a class as a loadable couch document.
 
