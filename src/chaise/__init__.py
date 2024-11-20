@@ -431,10 +431,10 @@ class Database:
             for doc in payload["docs"]:
                 yield self._blob2doc(doc, self._name, ...)
 
-            if payload.get("bookmark", None):
-                json_body["bookmark"] = payload["bookmark"]
-            else:
+            if not payload["docs"]:
                 break
+
+            json_body["bookmark"] = payload["bookmark"]
 
     async def attempt_put(
         self,

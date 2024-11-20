@@ -150,3 +150,29 @@ async def test_find_one_too_many(basic_database):
 
     with pytest.raises(chaise.TooManyResults):
         await basic_database.find_one({"feature": 1})
+
+
+async def test_find_many(basic_database):
+    doc1 = Document(email="test1@example.com", password="FAKE DON'T USE", feature=1)
+    doc2 = Document(email="test2@example.com", password="12345", feature=1)
+    doc3 = Document(email="test3@example.com", password="use_the_force", feature=2)
+    await basic_database.attempt_put(doc1, "test1")
+    await basic_database.attempt_put(doc2, "test2")
+    await basic_database.attempt_put(doc3, "test3")
+
+    docs = [doc async for doc in basic_database.find({"feature": 1})]
+
+    assert len(docs) == 2
+
+
+async def test_find_many_pages(basic_database):
+    doc1 = Document(email="test1@example.com", password="FAKE DON'T USE", feature=1)
+    doc2 = Document(email="test2@example.com", password="12345", feature=1)
+    doc3 = Document(email="test3@example.com", password="use_the_force", feature=2)
+    await basic_database.attempt_put(doc1, "test1")
+    await basic_database.attempt_put(doc2, "test2")
+    await basic_database.attempt_put(doc3, "test3")
+
+    docs = [doc async for doc in basic_database.find({"feature": 1}, pagesize=1)]
+
+    assert len(docs) == 2
