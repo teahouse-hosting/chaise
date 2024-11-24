@@ -1,6 +1,7 @@
 import json
 import typing
 from typing import AsyncIterator, Literal, Callable, Protocol, TypeVar, Generic
+import warnings
 
 import httpx
 
@@ -158,6 +159,12 @@ class TooManyResults(Exception):
     Requested a single document in a find operation and found more than one.
 
     Note this is based on number of results. Request was successful.
+    """
+
+
+class FindWarning(UserWarning):
+    """
+    Warnings reported by the CouchDB _find endpoint.
     """
 
 
@@ -406,6 +413,41 @@ class Database:
                 return self._blob2doc(results[0], self._name, ...)
             case _:
                 raise TooManyResults("More than one result found.")
+
+    async def find(
+        self,
+        selector: typing.Mapping,
+        use_index: str | list[str] | None = None,
+        pagesize: int | None = None,
+    ) -> AsyncIterator:
+        """
+        Generate documents based on ``selector``.
+
+        See :http:post:`/{db}/_find`
+        """
+        json_body = {"selector": selector, "bookmark": None}
+
+        if use_index is not None:
+            json_body |= {"use_index": use_index}
+
+        if pagesize is not None:
+            json_body |= {"limit": pagesize}
+
+        while True:
+            resp = await self._session._request(
+                "POST", self._name, "_find", json=json_body
+            )
+            payload = resp.json()
+            if payload.get("warning", None):
+                warnings.warn(payload["warning"], FindWarning)
+
+            for doc in payload["docs"]:
+                yield self._blob2doc(doc, self._name, ...)
+
+            if not payload["docs"]:
+                break
+
+            json_body["bookmark"] = payload["bookmark"]
 
     async def attempt_put(
         self,
