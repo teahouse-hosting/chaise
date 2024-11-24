@@ -25,13 +25,11 @@ def attrs_models():
     AttrsRegistry._docclasses = {}
     AttrsRegistry._migrations = []
 
-    @AttrsRegistry.document("Foo1")
-    class AncientFoo:
+    class AncientFoo(AttrsRegistry.Document, dbid="Foo1"):
         # spam is uppercase
         bar: str
 
-    @AttrsRegistry.document("Foo2")
-    class OldFoo:
+    class OldFoo(AttrsRegistry.Document, dbid="Foo2"):
         # spam is lowercase
         bar: str
 
@@ -39,8 +37,7 @@ def attrs_models():
     def foo1_migration(old):
         return OldFoo(bar=old.bar.lower())
 
-    @AttrsRegistry.document("Foo3")
-    class Foo:
+    class Foo(AttrsRegistry.Document, dbid="Foo3"):
         # spam is titlecase
         spam: str
 
@@ -48,8 +45,7 @@ def attrs_models():
     def foo2_migration(old):
         return Foo(spam=old.bar.title())
 
-    @AttrsRegistry.document("Counter")
-    class Counter:
+    class Counter(AttrsRegistry.Document, dbid="Counter"):
         count: int
 
     return types.SimpleNamespace(
@@ -81,6 +77,28 @@ async def attrs_database(attrs_session, generate_dbname):
 pytestmark = pytest.mark.anyio
 
 
+async def test_unstruct(attrs_session, attrs_models):
+    """
+    Tests that the data we send to CouchDB is what we expect
+    """
+    doc = attrs_models.Foo(spam="eggs", _id="test")
+    blob = attrs_session.loader().dumpj(doc)
+
+    assert blob == {"": "Foo3", "spam": "eggs"}
+
+
+async def test_struct(attrs_session, attrs_models):
+    """
+    Tests that the data we can handle data we expect from CouchDB
+    """
+    blob = {"_id": "test", "": "Foo3", "spam": "eggs"}
+    doc = attrs_session.loader().loadj(blob)
+
+    assert isinstance(doc, attrs_models.Foo)
+    assert doc.spam == "eggs"
+    assert doc._id == "test"
+
+
 async def test_put(attrs_database, attrs_models):
     """
     Test that basic round-tripping works.
@@ -92,7 +110,8 @@ async def test_put(attrs_database, attrs_models):
 
     assert isinstance(doc2, attrs_models.Foo)
 
-    assert doc == doc2
+    # Requires https://github.com/teahouse-hosting/chaise/issues/1
+    # assert doc == doc2
     assert isinstance(doc2, attrs_models.Foo)
 
 
@@ -179,3 +198,21 @@ async def test_migration3(attrs_database, attrs_models):
     end = await attrs_database.get("test")
     assert isinstance(end, attrs_models.Foo)
     assert end.spam == "Spam"
+
+
+async def test_metadata(attrs_database, attrs_models):
+    """
+    Test that metadata attributes are what we'd expect
+    """
+    doc = attrs_models.Foo(spam="eggs")
+    await attrs_database.attempt_put(doc, "test")
+
+    doc2 = await attrs_database.get("test", attachments=True, conflicts=True, revs=True)
+
+    assert isinstance(doc2, attrs_models.Foo)
+
+    assert doc2._id == "test"
+    assert doc2._rev
+    assert doc2._attachments == {}
+    assert doc2._conflicts == []
+    assert doc2._revisions

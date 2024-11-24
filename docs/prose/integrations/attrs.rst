@@ -18,8 +18,7 @@ and typing.
         session_class = DictSession
 
 
-    @MyRegistry.document("Snake")
-    class Snake:
+    class Snake(MyRegistry.Document, dbid="Snake"):
         pass
 
 
@@ -29,9 +28,9 @@ and typing.
     doc = await db.get('okeetee')
 
 
-:meth:`~chaise.attrs.AttrsRegistry.document` handles calling :func:`attrs.define`
-for you and will pass through keyword arguments, with the addition of
-``slots=False``.
+:meth:`~chaise.attrs.AttrsRegistry.Document` handles calling :func:`attrs.define`
+for you and will pass through keyword arguments defined on the class, with the
+addition of ``slots=False``.
 
 :data:`chaise.attrs.converter` is configured with either :mod:`cattrs.preconf.ujson`
 or :mod:`cattrs.preconf.json`, depending on what's available to import. This
