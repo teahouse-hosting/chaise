@@ -560,6 +560,12 @@ class Database:
     # TODO: Database operations
 
 
+class NoServerFound(Exception):
+    """
+    None of the configured servers seem to be working.
+    """
+
+
 class SessionPool:
     """
     Responsible for giving out Couch connections.
@@ -597,13 +603,22 @@ class SessionPool:
 
     async def _check_server(self, url: httpx.URL):
         resp = await self._client.get(url.join("_up"))
-        return resp.is_success
+        resp.raise_for_status()
 
     async def session(self) -> CouchSession:
         """
         Get a session
         """
+        excs = []
         async for url in self.iter_servers():
             url = httpx.URL(url)
-            if await self._check_server(url):
+            try:
+                await self._check_server(url)
+            except Exception as e:
+                excs.append(e)
+            else:
                 return self.session_class(self._client, url)
+        else:
+            raise NoServerFound() from ExceptionGroup(
+                "There were errors checking servers", excs
+            )
