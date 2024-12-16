@@ -560,6 +560,12 @@ class Database:
     # TODO: Database operations
 
 
+class NoServerFound(Exception):
+    """
+    None of the configured servers seem to be working.
+    """
+
+
 class SessionPool:
     """
     Responsible for giving out Couch connections.
@@ -607,3 +613,5 @@ class SessionPool:
             url = httpx.URL(url)
             if await self._check_server(url):
                 return self.session_class(self._client, url)
+        else:
+            raise NoServerFound()
