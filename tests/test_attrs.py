@@ -82,7 +82,7 @@ async def test_unstruct(attrs_session, attrs_models):
     Tests that the data we send to CouchDB is what we expect
     """
     doc = attrs_models.Foo(spam="eggs", _id="test")
-    blob = attrs_session.loader().dumpj(doc)
+    blob = attrs_session.loader().dump_to_blob(doc)
 
     assert blob == {"": "Foo3", "spam": "eggs"}
 
@@ -92,7 +92,7 @@ async def test_struct(attrs_session, attrs_models):
     Tests that the data we can handle data we expect from CouchDB
     """
     blob = {"_id": "test", "": "Foo3", "spam": "eggs"}
-    doc = attrs_session.loader().loadj(blob)
+    doc = attrs_session.loader().load_from_blob(blob)
 
     assert isinstance(doc, attrs_models.Foo)
     assert doc.spam == "eggs"

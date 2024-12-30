@@ -17,12 +17,12 @@ class DocumentLoader(Protocol, Generic[DOCT]):
     instances.
     """
 
-    def loadj(self, blob: dict) -> DOCT:
+    def load_from_blob(self, blob: dict) -> DOCT:
         """
         Convert a JSON blob into a document object.
         """
 
-    def dumpj(self, doc: DOCT) -> dict:
+    def dump_to_blob(self, doc: DOCT) -> dict:
         """
         Convert a document into a JSON blob.
         """
@@ -119,14 +119,14 @@ class DocumentRegistry:
             bname = self._get_name_from_class(type(doc))
         return doc
 
-    def loadj(self, blob):
+    def load_from_blob(self, blob):
         type = blob.pop(self.TYPE_KEY)
         klass = self._get_class_from_name(type)
         doc = self.load_doc(klass, blob)
         doc = self._migrate(type, doc)
         return doc
 
-    def dumpj(self, doc):
+    def dump_to_blob(self, doc):
         blob = self.dump_doc(doc)
         blob[self.TYPE_KEY] = self._get_name_from_class(type(doc))
         return blob
@@ -305,14 +305,14 @@ class Database:
             docid = blob["_id"]
         if etag is ...:
             etag = f'"{blob["_rev"]}"'
-        doc = self._session.loader().loadj(blob)
+        doc = self._session.loader().load_from_blob(blob)
         doc.__db = db
         doc.__docid = docid
         doc.__etag = etag
         return doc
 
     def _doc2blob(self, doc):
-        blob = self._session.loader().dumpj(doc)
+        blob = self._session.loader().dump_to_blob(doc)
         db = docid = etag = None
         try:
             db = doc.__db

@@ -52,7 +52,7 @@ class BasicLoader:
     Provides loading without worrying about types or migrations.
     """
 
-    def loadj(self, blob: dict, _kind=Document) -> Document:
+    def load_from_blob(self, blob: dict, _kind=Document) -> Document:
         doc = _kind()
         doc.id = blob.pop("_id", None)
         doc.rev = blob.pop("_rev", None)
@@ -66,7 +66,7 @@ class BasicLoader:
         doc.update(blob)
         return doc
 
-    def dumpj(self, doc: Document) -> dict:
+    def dump_to_blob(self, doc: Document) -> dict:
         return (
             doc
             | ({"_id": doc.id} if doc.id is not None else {})
@@ -93,10 +93,10 @@ class DictRegistry(DocumentRegistry):
         """
         Load a document
         """
-        return self._loader.loadj(blob, _kind=cls)
+        return self._loader.load_from_blob(blob, _kind=cls)
 
     def dump_doc(self, doc: Document) -> dict:
         """
         Save a document
         """
-        return self._loader.dumpj(doc)
+        return self._loader.dump_to_blob(doc)
