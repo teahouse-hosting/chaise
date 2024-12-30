@@ -105,14 +105,14 @@ async def test_put(attrs_database, attrs_models):
     """
     doc = attrs_models.Foo(spam="eggs")
     await attrs_database.attempt_put(doc, "test")
+    assert doc._id == "test"
+    assert doc._rev
 
     doc2 = await attrs_database.get("test")
 
     assert isinstance(doc2, attrs_models.Foo)
 
-    # Requires https://github.com/teahouse-hosting/chaise/issues/1
-    # assert doc == doc2
-    assert isinstance(doc2, attrs_models.Foo)
+    assert doc == doc2
 
 
 async def test_delete(attrs_database, attrs_models):

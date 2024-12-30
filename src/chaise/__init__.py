@@ -27,6 +27,11 @@ class DocumentLoader(Protocol, Generic[DOCT]):
         Convert a document into a JSON blob.
         """
 
+    def update_doc(self, doc: DOCT, **fields):
+        """
+        Update a document object in-place.
+        """
+
 
 class DocumentRegistry:
     """
@@ -109,6 +114,12 @@ class DocumentRegistry:
         Convert a document into a JSON blob.
 
         Override me.
+        """
+        raise NotImplementedError
+
+    def update_doc(self, doc, **fields):
+        """
+        Update a doc in-place
         """
         raise NotImplementedError
 
@@ -322,6 +333,20 @@ class Database:
             pass
         return blob, db, docid, etag
 
+    def _touch_doc(self, doc, *, db=None, etag=None, rev=None, id=None):
+        fields = {}
+        if etag is not None:
+            doc.__etag = etag
+        if db is not None:
+            doc.__db = db
+        if rev is not None:
+            fields["_rev"] = rev
+        if id is not None:
+            doc.__docid = id
+            fields["_id"] = id
+        if fields:
+            self._session.loader().update_doc(doc, **fields)
+
     async def get(
         self,
         docid: str,
@@ -465,13 +490,22 @@ class Database:
         """
         blob, _db, _docid, etag = self._doc2blob(doc)
         assert _db is None or _db == self._name
-        await self._session._request(
+        resp = await self._session._request(
             "PUT",
             self._name,
             _docid or docid,
             params={"batch": "ok"} if batch else {},
             headers={"If-Match": etag} if etag else {},
             json=blob,
+        )
+        payload = resp.json()
+        assert payload["ok"]
+        self._touch_doc(
+            doc,
+            db=self._name,
+            id=payload["id"],
+            etag=resp.headers["ETag"],
+            rev=resp.json()["rev"],
         )
 
     async def attempt_delete(self, doc, *, batch: bool = False):

@@ -77,6 +77,11 @@ class BasicLoader:
             }
         )
 
+    def update_doc(self, doc, **fields):
+        assert all(k.startswith("_") for k in fields)
+        for k, v in fields.items():
+            setattr(doc, k.removeprefix("_"), v)
+
 
 class BasicSession(CouchSession):
     loader = BasicLoader
@@ -100,3 +105,6 @@ class DictRegistry(DocumentRegistry):
         Save a document
         """
         return self._loader.dump_to_blob(doc)
+
+    def update_doc(self, doc, **fields):
+        self._loader.update_doc(doc, **fields)
