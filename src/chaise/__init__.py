@@ -523,18 +523,19 @@ class Database:
                 break
 
     async def iter_all_docs(
-        self, include_docs: bool = False
+        self, *, include_docs: bool = False
     ) -> AsyncIterator[structs.AllDocs_DocRef]:
         """
-        List all documents
+        List all documents.
 
-        TODO: More params
+        This excludes design documents, see :meth:`.iter_design_docs`.
 
         Args:
             include_docs: Pre-load documents
 
         See :http:get:`/{db}/_all_docs`
         """
+        # TODO: Pagination
         resp = await self._session._request(
             "GET",
             self._name,
@@ -548,6 +549,8 @@ class Database:
         )
         blob = resp.json()
         for ref in blob["rows"]:
+            if ref["id"].startswith("_design/"):
+                continue
             if "doc" in ref:
                 doc = self._blob2doc(ref["doc"], self._name, ref["id"])
             else:
@@ -556,7 +559,6 @@ class Database:
                 _db=self, docid=ref["id"], rev=ref["value"]["rev"], _doc=doc
             )
 
-    # TODO: Mango searches
     # TODO: Database operations
 
 
