@@ -7,9 +7,45 @@ import importlib.resources
 import posixpath
 from typing import Iterable
 
+import ckdl
 
-LOADERS = {
-    ".kdl": ...,
+
+class ParseError(Exception):
+    pass
+
+
+@dataclasses.dataclass
+class DeclaredDB:
+    name: str
+    _resource: importlib.resources.abc.Traversable
+    # options: ...
+
+
+class Loader:
+    def load_document(self, file_contents: str, db: DeclaredDB):
+        raise NotImplementedError
+
+
+class KdlLoader:
+    def load_document(self, file_contents: str, db: DeclaredDB):
+        if not file_contents.strip():
+            return
+        doc = ckdl.parse(file_contents, version="detect")
+        assert len(doc.nodes) == 1
+        (node,) = doc.nodes
+        assert node.name == "database"
+        assert not node.children
+        match node.args:
+            case ():
+                pass
+            case (name,):
+                db.name = name
+            case _:
+                raise ParseError("Invalid KDL: Unexpected arguments")
+
+
+LOADERS: dict[str, type[Loader]] = {
+    ".kdl": KdlLoader,
     # ".json": ...,
     # ".yaml": ...,
     # ".yml": ...,
@@ -36,13 +72,6 @@ def walk(anchor):
     yield from _recurse("", importlib.resources.files(anchor))
 
 
-@dataclasses.dataclass
-class DeclaredDB:
-    name: str
-    _resource: importlib.resources.abc.Traversable
-    # options: ...
-
-
 def find_dbs(anchor) -> Iterable[DeclaredDB]:
     for path, t in walk(anchor):
         # Traversable is a subset of pathlib.Path--it exludes most of the name
@@ -51,11 +80,13 @@ def find_dbs(anchor) -> Iterable[DeclaredDB]:
         stem, ext = posixpath.splitext(base)
         if stem == "__db__":
             try:
-                LOADERS[ext]
+                loader = LOADERS[ext]()
             except KeyError as exc:
                 raise Exception(f"Unable to determine loader for {path}") from exc
-            # TODO: load options from file
-            yield DeclaredDB(
-                name=posixpath.basename(parent),
-                _resource=t,
-            )
+            else:
+                obj = DeclaredDB(
+                    name=posixpath.basename(parent),
+                    _resource=t,
+                )
+                loader.load_document(t.read_text(), obj)
+                yield obj
