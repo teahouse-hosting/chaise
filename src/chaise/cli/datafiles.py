@@ -9,10 +9,11 @@ from typing import Iterable
 
 
 LOADERS = {
-    ".json": ...,
-    ".yaml": ...,
-    ".yml": ...,
-    ".toml": ...,
+    ".kdl": ...,
+    # ".json": ...,
+    # ".yaml": ...,
+    # ".yml": ...,
+    # ".toml": ...,
     # '.py': ...,
 }
 
