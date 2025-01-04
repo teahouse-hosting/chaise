@@ -3,6 +3,8 @@ Various data structures used by chaise.
 """
 
 import dataclasses
+import enum
+import functools
 
 import chaise  # Be careful using this, for circular import reasons
 
@@ -34,3 +36,54 @@ class AllDocs_DocRef:
             # (It can still be deleted/vacuumed, but that's fine. probably.)
             self._doc = await self._db.get(self.docid, rev=self.rev)
         return self._doc
+
+
+class AscDesc(enum.StrEnum):
+    ASC = "asc"
+    DESC = "desc"
+
+
+@dataclasses.dataclass
+class IndexDef:
+    """
+    Index Definition.
+    """
+
+    #: Fields and their direction.
+    fields: dict[str, AscDesc]
+
+
+@dataclasses.dataclass
+class Index:
+    """
+    Return of :meth:`~chaise.Database.iter_indexes`
+    """
+
+    #: ID of the design document the index belongs to.
+    ddoc: str
+    #: Name of the index.
+    name: str
+    #: Partitioned (:const:`True`) or global (:const:`False`) index.
+    partitioned: bool
+    #: Type of the index. Currently ``"json"`` is the only supported type.
+    type: str
+    #: Definition of the index, containing the indexed fields and the sort
+    #: order: ascending or descending.
+    def_: IndexDef
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            ddoc=data["ddoc"],
+            name=data["name"],
+            partitioned=data["partitioned"],
+            type=data["type"],
+            def_=IndexDef(
+                fields={
+                    k: AscDesc(v)
+                    for k, v in functools.reduce(
+                        dict.update, data["def"]["fields"], {}
+                    ).items()
+                },
+            ),
+        )

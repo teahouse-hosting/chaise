@@ -556,7 +556,14 @@ class Database:
                 _db=self, docid=ref["id"], rev=ref["value"]["rev"], _doc=doc
             )
 
-    # TODO: Mango searches
+    async def iter_indexes(self) -> AsyncIterator[structs.Index]:
+        resp = await self._session._request("GET", self._name, "_index")
+        payload = resp.json()
+        for idx in payload["indexes"]:
+            if idx["ddoc"] is None and idx["name"] == "_all_docs":
+                continue
+            yield structs.Index.from_dict(idx)
+
     # TODO: Database operations
 
 
