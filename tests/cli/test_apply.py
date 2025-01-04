@@ -15,3 +15,6 @@ async def test_apply(cli, cli_session):
 
     assert indexes["foo"].ddoc == "a-ddoc"
     assert indexes["foo"].def_.fields == {"spam": "asc", "eggs": "asc"}
+
+    assert indexes["bar"].ddoc == "a-ddoc"
+    assert indexes["bar"].def_.fields == {"quux": "asc", "baz": "asc"}

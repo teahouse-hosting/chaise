@@ -576,7 +576,7 @@ class Database:
             "POST",
             self._name,
             "_index",
-            params={
+            json={
                 "index": {"fields": list(fields)},
                 "name": name,
                 "ddoc": ddoc,

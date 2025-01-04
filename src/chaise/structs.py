@@ -5,6 +5,7 @@ Various data structures used by chaise.
 import dataclasses
 import enum
 import functools
+import operator
 
 import chaise  # Be careful using this, for circular import reasons
 
@@ -74,7 +75,7 @@ class Index:
     @classmethod
     def from_dict(cls, data):
         return cls(
-            ddoc=data["ddoc"],
+            ddoc=data["ddoc"].removeprefix("_design/"),
             name=data["name"],
             partitioned=data["partitioned"],
             type=data["type"],
@@ -82,7 +83,7 @@ class Index:
                 fields={
                     k: AscDesc(v)
                     for k, v in functools.reduce(
-                        dict.update, data["def"]["fields"], {}
+                        operator.or_, data["def"]["fields"], {}
                     ).items()
                 },
             ),
