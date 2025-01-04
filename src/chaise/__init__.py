@@ -564,7 +564,25 @@ class Database:
                 continue
             yield structs.Index.from_dict(idx)
 
-    # TODO: Database operations
+    async def add_index(
+        self,
+        name: str | None = None,
+        *,
+        fields: list[str],
+        ddoc: str | None = None,
+        type: str = "json",
+    ):
+        await self._session._request(
+            "POST",
+            self._name,
+            "_index",
+            params={
+                "index": {"fields": list(fields)},
+                "name": name,
+                "ddoc": ddoc,
+                "type": type,
+            },
+        )
 
 
 class NoServerFound(Exception):
