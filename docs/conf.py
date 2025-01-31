@@ -54,6 +54,10 @@ intersphinx_mapping = {
 }
 
 
-autodoc_default_flags = ["members", "undoc-members", "show-inheritance"]
+autodoc_default_options = {
+    "members": True,
+    "undoc-members": True,
+    "show-inheritance": True,
+}
 
 viewcode_line_numbers = True

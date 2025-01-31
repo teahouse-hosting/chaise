@@ -1,6 +1,7 @@
 import json
 import typing
 from typing import AsyncIterator, Literal, Callable, Protocol, TypeVar, Generic
+import warnings
 
 import httpx
 
@@ -164,6 +165,12 @@ class TooManyResults(Exception):
     Requested a single document in a find operation and found more than one.
 
     Note this is based on number of results. Request was successful.
+    """
+
+
+class FindWarning(UserWarning):
+    """
+    Warnings reported by the CouchDB _find endpoint.
     """
 
 
@@ -370,6 +377,19 @@ class Database:
         else:
             # Conflicts mode
             etag = f'"{blob["_rev"]}"'
+
+        # For some reason, requested fiels are omitted when empty
+        if attachments:
+            blob.setdefault("_attachments", {})
+        if conflicts:
+            blob.setdefault("_conflicts", [])
+        if deleted_conflicts:
+            blob.setdefault("_deleted_conflicts", [])
+        if revs:
+            blob.setdefault("_revisions", {})
+        if revs_info or open_revs:
+            blob.setdefault("_revisions", {})
+
         doc = self._blob2doc(blob, self._name, docid, etag)
         return doc
 
@@ -399,6 +419,41 @@ class Database:
                 return self._blob2doc(results[0], self._name, ...)
             case _:
                 raise TooManyResults("More than one result found.")
+
+    async def find(
+        self,
+        selector: typing.Mapping,
+        use_index: str | list[str] | None = None,
+        pagesize: int | None = None,
+    ) -> AsyncIterator:
+        """
+        Generate documents based on ``selector``.
+
+        See :http:post:`/{db}/_find`
+        """
+        json_body = {"selector": selector, "bookmark": None}
+
+        if use_index is not None:
+            json_body |= {"use_index": use_index}
+
+        if pagesize is not None:
+            json_body |= {"limit": pagesize}
+
+        while True:
+            resp = await self._session._request(
+                "POST", self._name, "_find", json=json_body
+            )
+            payload = resp.json()
+            if payload.get("warning", None):
+                warnings.warn(payload["warning"], FindWarning)
+
+            for doc in payload["docs"]:
+                yield self._blob2doc(doc, self._name, ...)
+
+            if not payload["docs"]:
+                break
+
+            json_body["bookmark"] = payload["bookmark"]
 
     async def attempt_put(
         self,
@@ -511,6 +566,12 @@ class Database:
     # TODO: Database operations
 
 
+class NoServerFound(Exception):
+    """
+    None of the configured servers seem to be working.
+    """
+
+
 class SessionPool:
     """
     Responsible for giving out Couch connections.
@@ -548,13 +609,22 @@ class SessionPool:
 
     async def _check_server(self, url: httpx.URL):
         resp = await self._client.get(url.join("_up"))
-        return resp.is_success
+        resp.raise_for_status()
 
     async def session(self) -> CouchSession:
         """
         Get a session
         """
+        excs = []
         async for url in self.iter_servers():
             url = httpx.URL(url)
-            if await self._check_server(url):
+            try:
+                await self._check_server(url)
+            except Exception as e:
+                excs.append(e)
+            else:
                 return self.session_class(self._client, url)
+        else:
+            raise NoServerFound() from ExceptionGroup(
+                "There were errors checking servers", excs
+            )

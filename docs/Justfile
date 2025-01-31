@@ -10,7 +10,7 @@ BUILDDIR      := "_build"
 
 # Run sphinx autobuild against the docs.
 serve:
-  poetry run sphinx-autobuild --nitpicky --port 0 --open-browser "{{SOURCEDIR}}" "{{BUILDDIR}}/html"
+  poetry run sphinx-autobuild --nitpicky --port 0 --open-browser --watch "../src" "{{SOURCEDIR}}" "{{BUILDDIR}}/html"
 
 # Do a sphinx build
 build KIND="html":
