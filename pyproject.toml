@@ -30,6 +30,7 @@ sphinx-inline-tabs = "^2023.4.21"
 sphinx-autobuild = "^2024.4.16"
 sphinx-copybutton = "^0.5.2"
 sphinxcontrib-httpdomain = "^1.8.1"
+sphinx-argparse = "^0.5.2"
 
 [tool.poetry.extras]
 attrs = ["attrs", "cattrs"]
