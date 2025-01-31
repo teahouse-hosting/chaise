@@ -1,0 +1,49 @@
+name: Push
+
+on: [push]
+
+jobs:
+  pre-commit:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - uses: teahouse-hosting/pre-commit@main
+
+  pytest:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # ["pypy3.9", "pypy3.10", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: poetry
+      - name: Install Dependencies
+        run: poetry install
+      - name: Run tests
+        run: poetry run pytest --verbose
+
+  mypy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v5
+      - run: poetry install
+      - run: poetry run mypy
