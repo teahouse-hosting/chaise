@@ -1,6 +1,15 @@
 import json
 import typing
-from typing import AsyncIterator, Literal, Callable, Protocol, TypeVar, Generic
+from typing import (
+    AsyncIterator,
+    Literal,
+    Callable,
+    Protocol,
+    TypeVar,
+    Generic,
+    ClassVar,
+    Any,
+)
 import warnings
 
 import httpx
@@ -45,8 +54,8 @@ class DocumentRegistry:
 
     TYPE_KEY = ""
 
-    _docclasses = {}
-    _migrations = []
+    _docclasses: ClassVar[dict[TypeIDType, type]] = {}
+    _migrations: ClassVar[list[tuple[TypeIDType, TypeIDType, Callable]]] = []
 
     def __init_sublcass__(cls):
         cls._docclasses = {}
@@ -431,7 +440,7 @@ class Database:
 
         See :http:post:`/{db}/_find`
         """
-        json_body = {"selector": selector, "bookmark": None}
+        json_body: dict[str, Any] = {"selector": selector, "bookmark": None}
 
         if use_index is not None:
             json_body |= {"use_index": use_index}
@@ -597,7 +606,7 @@ class SessionPool:
         """
         return httpx.AsyncClient(http2=True, follow_redirects=True)
 
-    async def iter_servers(self) -> AsyncIterator[str]:
+    async def iter_servers(self) -> AsyncIterator[str | httpx.URL]:
         """
         Produce the list of potential servers.
 
