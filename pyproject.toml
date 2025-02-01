@@ -1,17 +1,40 @@
-[tool.poetry]
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[project]
 name = "chaise"
-version = "0.6.0"
 description = "An async Python client for CouchDB"
-authors = ["Jamie Bliss <jamie@ivyleav.es>"]
 license = "Artistic-2.0"
 readme = "README.md"
+dynamic = ["version"]
+requires-python = ">=3.11"
+dependencies = [
+    "httpx[http2]>=0.27,<0.29",
+    "anyio>=4.4.0,<4.5",
+    "attrs>=23.2,<25.0",
+    "cattrs>=23.2.3,<25.0.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-httpx = {extras = ["http2"], version = ">=0.27,<0.29"}
-anyio = "^4.4.0"
-attrs = {version = ">=23.2,<25.0", optional = true}
-cattrs = {version = ">=23.2.3,<25.0.0", optional = true}
+[[project.authors]]
+name = "Jamie Bliss"
+email = "jamie@ivyleav.es"
+
+[project.optional-dependencies]
+attrs = ["attrs", "cattrs"]
+
+[project.scripts]
+chaise = "chaise.cli:entry"
+
+
+[tool.poetry]
+requires-poetry = ">=2.0"
+version = "0.0.0"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
@@ -30,12 +53,7 @@ sphinx-autobuild = "^2024.4.16"
 sphinx-copybutton = "^0.5.2"
 sphinxcontrib-httpdomain = "^1.8.1"
 
-[tool.poetry.extras]
-attrs = ["attrs", "cattrs"]
-
-[tool.poetry.scripts]
-chaise = 'chaise.cli:entry'
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.poetry-dynamic-versioning]
+enable = true
+dirty = true
+bump = true
