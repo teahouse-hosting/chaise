@@ -17,7 +17,7 @@ repos:
   # Run the formatter.
   - id: ruff-format
 -   repo: https://github.com/python-poetry/poetry
-    rev: '1.8.3'
+    rev: '2.0.1'
     hooks:
     -   id: poetry-check
 # Causes problems in CI, https://github.com/teahouse-hosting/chaise/issues/4
