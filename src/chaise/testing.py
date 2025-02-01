@@ -6,15 +6,10 @@ import contextlib
 import functools
 from pathlib import Path
 import socket
-import subprocess
-import sys
 import typing
 
 import anyio
 import docker
-import docker.errors
-import docker.models.images
-import docker.types
 import docker.utils
 import httpx
 
@@ -30,6 +25,7 @@ def _docker_3190_workaround():
     Work around for https://github.com/docker/docker-py/issues/3190
     """
     if docker.utils.config.find_config_file() is None:
+        # TODO: Prefer .config_path_from_environment() over .home_dir()
         config_path = (
             Path(docker.utils.config.home_dir())
             / docker.utils.config.DOCKER_CONFIG_FILENAME
@@ -71,37 +67,34 @@ def spawn_docker_couchdb() -> typing.Iterator[str]:
     Creates a tempory CouchDB instance using docker, and automatically cleans it up.
 
     Returns the URL by which it's accessible.
-
-    BUG: Instead of finding a free port, this always uses port 5984. See
-    https://github.com/teahouse-hosting/quick-and-dirty-couch/issues/1
     """
-    port = _find_free_port()
-    # FIXME: We can't set the couch port quickly from outside
-    port = 5984
+    client = _get_docker_client()
 
-    # Spawn a container
-    proc = subprocess.Popen(
-        [
-            "docker",
-            "run",
-            "--rm",
-            "-e",
-            "COUCHDB_USER=admin",
-            "-e",
-            "COUCHDB_PASSWORD=admin",
-            "-p",
-            f"{port}:{port}",
-            "ghcr.io/teahouse-hosting/quick-and-dirty-couch:latest",
-        ],
-        stdin=subprocess.DEVNULL,
-        stdout=sys.stderr,
-        stderr=sys.stderr,
+    couch_container = client.containers.run(
+        detach=True,
+        image="ghcr.io/teahouse-hosting/quick-and-dirty-couch:latest",
+        auto_remove=True,
+        environment={
+            "COUCHDB_USER": "admin",
+            "COUCHDB_PASSWORD": "admin",
+        },
+        ports={"5984/tcp": None},
     )
+    # TODO: Stream container stdout
+
+    # Dig out the connected port
+    port_config = couch_container.attrs["NetworkSettings"]["Ports"]["5984/tcp"][0]
+    couch_ip = port_config["HostIp"]
+    if couch_ip == "0.0.0.0":
+        couch_ip = "127.0.0.1"
+    elif couch_ip == "::":
+        couch_ip = "::1"
+    couch_port = port_config["HostPort"]
+
     try:
-        yield f"http://admin:admin@127.0.0.1:{port}/"
+        yield f"http://admin:admin@{couch_ip}:{couch_port}/"
     finally:
-        proc.terminate()
-        proc.wait()
+        couch_container.stop()
 
 
 async def wait_for_readiness(couch_url: str, *, timeout: float = 60) -> None:
