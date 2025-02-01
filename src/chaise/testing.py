@@ -82,6 +82,8 @@ def spawn_docker_couchdb() -> typing.Iterator[str]:
     )
     # TODO: Stream container stdout
 
+    couch_container.reload()
+
     # Dig out the connected port
     port_config = couch_container.attrs["NetworkSettings"]["Ports"]["5984/tcp"][0]
     couch_ip = port_config["HostIp"]
