@@ -108,3 +108,28 @@ async def test_migration3(dict_database, dict_models):
     end = await dict_database.get("test")
     assert isinstance(end, dict_models.Foo)
     assert end["bar"] == "Spam"
+
+
+async def test_type_munge_single(dict_session, dict_models):
+    registry = dict_session.loader
+    from chaise._query import munge_query
+
+    assert munge_query({type: dict_models.Counter}, registry) == {"": "Counter"}
+
+
+async def test_type_munge_migrations(dict_session, dict_models):
+    registry = dict_session.loader
+    from chaise._query import munge_query
+
+    assert munge_query({type: dict_models.Foo}, registry) == {
+        "": {"$in": ["Foo1", "Foo2", "Foo3"]}
+    }
+
+
+async def test_type_munge_union(dict_session, dict_models):
+    registry = dict_session.loader
+    from chaise._query import munge_query
+
+    assert munge_query({type: dict_models.Counter | dict_models.Foo}, registry) == {
+        "": {"$in": ["Counter", "Foo1", "Foo2", "Foo3"]}
+    }
