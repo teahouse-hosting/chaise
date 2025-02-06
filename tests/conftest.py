@@ -14,10 +14,8 @@ def _couch_url():
 
     if url := os.environ.get("COUCHDB_URL", None):
         # One was handed to us by the environment. Just use that.
-        print("env")
         yield url
     else:
-        print("docker")
         with spawn_docker_couchdb() as url:
             yield url
 
@@ -26,7 +24,6 @@ def _couch_url():
 async def couch_url(_couch_url):
     from chaise.testing import wait_for_readiness
 
-    print(_couch_url)
     await wait_for_readiness(_couch_url)
     return _couch_url
 
