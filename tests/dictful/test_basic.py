@@ -176,3 +176,11 @@ async def test_find_many_pages(basic_database):
     docs = [doc async for doc in basic_database.find({"feature": 1}, pagesize=1)]
 
     assert len(docs) == 2
+
+
+async def test_type_munge_error(basic_session):
+    registry = basic_session.loader
+    from chaise._query import munge_query
+
+    with pytest.raises(TypeError):
+        munge_query({type: object}, registry)

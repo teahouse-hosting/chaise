@@ -122,7 +122,7 @@ async def test_type_munge_migrations(dict_session, dict_models):
     from chaise._query import munge_query
 
     assert munge_query({type: dict_models.Foo}, registry) == {
-        "": {"$in": ["Foo1", "Foo2", "Foo3"]}
+        "": {"$in": ["Foo3", "Foo2", "Foo1"]}
     }
 
 
@@ -131,5 +131,5 @@ async def test_type_munge_union(dict_session, dict_models):
     from chaise._query import munge_query
 
     assert munge_query({type: dict_models.Counter | dict_models.Foo}, registry) == {
-        "": {"$in": ["Counter", "Foo1", "Foo2", "Foo3"]}
+        "": {"$in": ["Counter", "Foo3", "Foo2", "Foo1"]}
     }

@@ -27,6 +27,11 @@ class DocumentLoader(Protocol, Generic[DOCT]):
         Convert a document into a JSON blob.
         """
 
+    def get_type_names(self, cls) -> list[str]:
+        """
+        Get all the names a given class might use in the database.
+        """
+
 
 class DocumentRegistry:
     """
@@ -130,6 +135,18 @@ class DocumentRegistry:
         blob = self.dump_doc(doc)
         blob[self.TYPE_KEY] = self._get_name_from_class(type(doc))
         return blob
+
+    def get_type_names(self, cls) -> list[str]:
+        """
+        Get all the names a given class might use in the database.
+        """
+        aname = self._get_name_from_class(cls)
+        names = [aname]
+        while bnames := [b for b, a, _ in self._migrations if a == aname]:
+            (bname,) = bnames
+            names.append(bname)
+            aname = bname
+        return names
 
 
 class Conflict(Exception):

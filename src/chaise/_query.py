@@ -3,7 +3,11 @@ Tools for munging mango queries.
 """
 
 import copy
+import types
+import typing
 import warnings
+
+_UnionType = type(typing.Union[int, float])
 
 
 class _BlobWalker:
@@ -55,13 +59,37 @@ class _BlobWalker:
             self(item)
 
 
+def _deunion(cls) -> list[type]:
+    """
+    Turns classes and unions into lists
+    """
+    if isinstance(cls, type):
+        return [cls]
+    elif isinstance(cls, types.UnionType):
+        return list(cls.__args__)
+    elif isinstance(cls, _UnionType):
+        return list(cls.__args__)
+    else:
+        raise TypeError(f"Can't handle a class description of {cls!r}")
+
+
 class _QueryMunger(_BlobWalker):
     def __init__(self, registry):
-        self.registry = registry
+        self.registry = registry()
 
     def munge_dict(self, val):
         if type in val:
-            val[self.registry.TYPE_KEY] = ...
+            classes = _deunion(val[type])
+            names = []
+            for cls in classes:
+                names += self.registry.get_type_names(cls)
+
+            if len(names) == 0:
+                raise ValueError(f"Unable to get Database names for {val[type]!r}")
+            elif len(names) == 1:
+                val[self.registry.TYPE_KEY] = names[0]
+            else:
+                val[self.registry.TYPE_KEY] = {"$in": names}
             del val[type]
 
 
