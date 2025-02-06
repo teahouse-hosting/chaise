@@ -114,7 +114,10 @@ async def test_type_munge_single(dict_session, dict_models):
     registry = dict_session.loader
     from chaise._query import munge_query
 
-    assert munge_query({type: dict_models.Counter}, registry) == {"": "Counter"}
+    assert munge_query({type: dict_models.Counter, "foo": "bar"}, registry) == {
+        registry.TYPE_KEY: "Counter",
+        "foo": "bar",
+    }
 
 
 async def test_type_munge_migrations(dict_session, dict_models):
@@ -122,7 +125,7 @@ async def test_type_munge_migrations(dict_session, dict_models):
     from chaise._query import munge_query
 
     assert munge_query({type: dict_models.Foo}, registry) == {
-        "": {"$in": ["Foo3", "Foo2", "Foo1"]}
+        registry.TYPE_KEY: {"$in": ["Foo3", "Foo2", "Foo1"]}
     }
 
 
@@ -131,5 +134,36 @@ async def test_type_munge_union(dict_session, dict_models):
     from chaise._query import munge_query
 
     assert munge_query({type: dict_models.Counter | dict_models.Foo}, registry) == {
-        "": {"$in": ["Counter", "Foo3", "Foo2", "Foo1"]}
+        registry.TYPE_KEY: {"$in": ["Counter", "Foo3", "Foo2", "Foo1"]}
     }
+
+
+async def test_find_type(dict_database, dict_models):
+    doc = dict_models.Counter(count=0)
+    await dict_database.attempt_put(doc, "test")
+    doc1 = dict_models.AncientFoo(bar="SPAM")
+    doc2 = dict_models.OldFoo(bar="spam")
+    doc3 = dict_models.Foo(spam="eggs")
+    await dict_database.attempt_put(doc1, "test1")
+    await dict_database.attempt_put(doc2, "test2")
+    await dict_database.attempt_put(doc3, "test3")
+
+    docs = [doc async for doc in dict_database.find({type: dict_models.Counter})]
+
+    assert len(docs) == 1
+
+
+async def test_find_migrations(dict_database, dict_models):
+    doc = dict_models.Counter(count=0)
+    await dict_database.attempt_put(doc, "test")
+    doc1 = dict_models.AncientFoo(bar="SPAM")
+    doc2 = dict_models.OldFoo(bar="spam")
+    doc3 = dict_models.Foo(spam="eggs")
+    await dict_database.attempt_put(doc1, "test1")
+    await dict_database.attempt_put(doc2, "test2")
+    await dict_database.attempt_put(doc3, "test3")
+
+    docs = [doc async for doc in dict_database.find({type: dict_models.Foo})]
+
+    assert len(docs) == 3
+    assert all(isinstance(d, dict_models.Foo) for d in docs)

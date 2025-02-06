@@ -5,7 +5,7 @@ import warnings
 
 import httpx
 
-from . import structs
+from . import structs, _query
 
 
 DOCT = TypeVar("DOCT")
@@ -414,7 +414,10 @@ class Database:
 
         See :http:post:`/{db}/_find`
         """
-        json_body = {"selector": selector, "limit": 2}
+        json_body = {
+            "selector": _query.munge_query(selector, self._session.loader),
+            "limit": 2,
+        }
 
         if use_index is not None:
             json_body |= {"use_index": use_index}
@@ -442,7 +445,10 @@ class Database:
 
         See :http:post:`/{db}/_find`
         """
-        json_body = {"selector": selector, "bookmark": None}
+        json_body = {
+            "selector": _query.munge_query(selector, self._session.loader),
+            "bookmark": None,
+        }
 
         if use_index is not None:
             json_body |= {"use_index": use_index}
