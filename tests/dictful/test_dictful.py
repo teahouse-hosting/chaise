@@ -17,6 +17,8 @@ async def test_put(dict_database, dict_models):
     """
     doc = dict_models.Foo(spam="eggs")
     await dict_database.attempt_put(doc, "test")
+    assert doc.id == "test"
+    assert doc.rev
 
     doc2 = await dict_database.get("test")
 
@@ -45,9 +47,12 @@ async def test_simple_mutate(dict_database, dict_models):
     """
     doc = dict_models.Foo(spam="eggs")
     await dict_database.attempt_put(doc, "test")
+    r1 = doc.rev
 
     async for doc in dict_database.mutate("test"):
         doc["spam"] = "foobar"
+
+    assert doc.rev != r1
 
     doc = await dict_database.get("test")
     assert doc["spam"] == "foobar"

@@ -18,6 +18,8 @@ async def test_put(basic_database):
     """
     doc = Document(spam="eggs")
     await basic_database.attempt_put(doc, "test")
+    assert doc.id == "test"
+    assert doc.rev
 
     doc2 = await basic_database.get("test")
 
@@ -44,9 +46,12 @@ async def test_simple_mutate(basic_database):
     """
     doc = Document(spam="eggs")
     await basic_database.attempt_put(doc, "test")
+    r1 = doc.rev
 
     async for doc in basic_database.mutate("test"):
         doc["spam"] = "foobar"
+
+    assert doc.rev != r1
 
     doc = await basic_database.get("test")
     assert doc["spam"] == "foobar"
