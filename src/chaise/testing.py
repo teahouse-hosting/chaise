@@ -6,6 +6,7 @@ import contextlib
 import functools
 from pathlib import Path
 import socket
+import sys
 import typing
 
 import anyio
@@ -121,3 +122,30 @@ async def wait_for_readiness(couch_url: str, *, timeout: float = 60) -> None:
                 await anyio.sleep(timeout_increment)
     else:
         raise TimeoutError(f"Timeout waiting for CouchDB to initialize ({couch_url})")
+
+
+async def _call_cli(couch_url, *argv):
+    oldargv = sys.argv
+    try:
+        sys.argv = ["chaise", "--verbose", "--server", couch_url, *argv]
+        import chaise.cli
+
+        await chaise.cli.main()
+    finally:
+        sys.argv = oldargv
+
+
+@contextlib.asynccontextmanager
+async def run_cli_apply(couch_url: str, dbs_module: str):
+    """
+    Runs the apply CLI command, and then cleans up databases afterwards.
+    """
+    await _call_cli(couch_url, "apply", dbs_module)
+    yield
+    # TODO: Look up what databases were actually defined
+    from chaise.cli.client import ConstantPool
+
+    session = await ConstantPool(couch_url).session()
+    dbs = {db async for db in session.iter_dbs() if not db.startswith("_")}
+    for db in dbs:
+        await session.delete_db(db)
