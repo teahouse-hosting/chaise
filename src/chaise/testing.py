@@ -7,6 +7,7 @@ import functools
 from pathlib import Path
 import socket
 import sys
+import time
 import typing
 
 import anyio
@@ -85,10 +86,17 @@ def spawn_docker_couchdb() -> typing.Iterator[str]:
     )
     # TODO: Stream container stdout
 
-    couch_container.reload()
+    port_config = None
+    while port_config is None:
+        couch_container.reload()
+        try:
+            # Dig out the connected port
+            port_config = couch_container.attrs["NetworkSettings"]["Ports"]["5984/tcp"][
+                0
+            ]
+        except IndexError:
+            time.sleep(0.1)
 
-    # Dig out the connected port
-    port_config = couch_container.attrs["NetworkSettings"]["Ports"]["5984/tcp"][0]
     couch_ip = port_config["HostIp"]
     if couch_ip == "0.0.0.0":
         couch_ip = "127.0.0.1"
