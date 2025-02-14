@@ -49,6 +49,7 @@ attrs = ">=23.2,<25.0"
 cattrs = ">=23.2.3,<25.0.0"
 docker = "^7.1.0"
 mypy = "^1.14.1"
+types-docker = "^7.1.0.20241229"
 
 
 [tool.poetry.group.docs.dependencies]
@@ -65,3 +66,6 @@ sphinx-argparse = "^0.5.2"
 enable = true
 dirty = true
 bump = true
+
+[tool.mypy]
+mypy_path = "stubs"
