@@ -46,7 +46,7 @@ Or it the database name can be changed:
 Design Documents
 ~~~~~~~~~~~~~~~~
 
-A design document is represented by a single KDL file next to a ``__db__.kdl`` file. It either consists of one or more indexes (for use with mango queries) or one or more views (not yet implemented). You cannot mix indexes and views in the same
+A design document is represented by a single KDL file next to a ``__db__.kdl`` file. It either consists of one or more indexes (for use with mango queries) or one or more views (not yet implemented). You cannot mix indexes and views in the same document.
 
 Each index consists of a name and one or more fields. They can be listed individually:
 
