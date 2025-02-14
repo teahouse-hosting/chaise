@@ -17,7 +17,9 @@ import httpx
 
 class ContextNotExistError(ValueError):
     """
-    The given context does not exist
+    The given Docker context does not exist.
+
+    This should only happen if your Docker client is misconfigured.
     """
 
 
@@ -65,7 +67,7 @@ def _find_free_port():
 @contextlib.contextmanager
 def spawn_docker_couchdb() -> typing.Iterator[str]:
     """
-    Creates a tempory CouchDB instance using docker, and automatically cleans it up.
+    Creates a tempory CouchDB instance using Docker, and automatically cleans it up.
 
     Returns the URL by which it's accessible.
     """
@@ -138,7 +140,8 @@ async def _call_cli(couch_url, *argv):
 @contextlib.asynccontextmanager
 async def run_cli_apply(couch_url: str, dbs_module: str):
     """
-    Runs the apply CLI command, and then cleans up databases afterwards.
+    Context manager that runs the apply CLI command, and then cleans up
+    databases afterwards.
     """
     await _call_cli(couch_url, "apply", dbs_module)
     yield
