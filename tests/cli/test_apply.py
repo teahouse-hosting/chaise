@@ -18,3 +18,13 @@ async def test_apply(cli, cli_session):
 
     assert indexes["bar"].ddoc == "a-ddoc"
     assert indexes["bar"].def_.fields == {"quux": "asc", "baz": "asc"}
+
+
+async def test_apply_testing(couch_url, cli_session):
+    import chaise.testing
+
+    async with chaise.testing.run_cli_apply(couch_url, "demo_schema"):
+        assert await cli_session.get_db("db-empty")
+
+    with pytest.raises(chaise.Missing):
+        await cli_session.get_db("db-empty")
