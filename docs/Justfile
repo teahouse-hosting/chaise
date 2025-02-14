@@ -19,3 +19,8 @@ build KIND="html":
 # Clean up built files
 @clean:
   just build clean
+
+
+# Show the couch inventory
+inv-couch:
+  poetry run python -m sphinx.ext.intersphinx https://docs.couchdb.org/en/stable/objects.inv

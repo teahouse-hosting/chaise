@@ -17,6 +17,8 @@ async def test_put(dict_database, dict_models):
     """
     doc = dict_models.Foo(spam="eggs")
     await dict_database.attempt_put(doc, "test")
+    assert doc.id == "test"
+    assert doc.rev
 
     doc2 = await dict_database.get("test")
 
@@ -45,9 +47,12 @@ async def test_simple_mutate(dict_database, dict_models):
     """
     doc = dict_models.Foo(spam="eggs")
     await dict_database.attempt_put(doc, "test")
+    r1 = doc.rev
 
     async for doc in dict_database.mutate("test"):
         doc["spam"] = "foobar"
+
+    assert doc.rev != r1
 
     doc = await dict_database.get("test")
     assert doc["spam"] == "foobar"
@@ -108,3 +113,23 @@ async def test_migration3(dict_database, dict_models):
     end = await dict_database.get("test")
     assert isinstance(end, dict_models.Foo)
     assert end["bar"] == "Spam"
+
+
+async def test_all_docs_design(dict_database, dict_models):
+    """
+    Test that iter_all_docs skips design documents
+    """
+    # Skip document handling to insert raw design document
+    await dict_database._session._request(
+        "PUT",
+        dict_database._name,
+        "_design/spam",
+        json={},
+    )
+
+    doc = dict_models.Foo(spam="eggs")
+    await dict_database.attempt_put(doc, "test")
+
+    all_docs = [ref async for ref in dict_database.iter_all_docs()]
+
+    assert len(all_docs) == 1

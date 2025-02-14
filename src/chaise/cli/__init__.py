@@ -19,14 +19,30 @@ async def apply(args):
     session = await ConstantPool(args.server).session()
 
     # Ensure all the dbs exist
-    for db in find_dbs(args.module):
+    for wanted in find_dbs(args.module):
         try:
-            await session.get_db(db.name)
+            livedb = await session.get_db(wanted.name)
         except Missing:
-            print(f"Creating {db.name}...")  # TODO: Logging
-            await session.create_db(db.name)
+            print(f"Creating {wanted.name}...")  # TODO: Logging
+            livedb = await session.create_db(wanted.name)
         else:
-            print(f"{db.name} exists")
+            print(f"{wanted.name} exists")
+
+        current_indexes = {(i.ddoc, i.name): i async for i in livedb.iter_indexes()}
+        wanted_indexes = {
+            (ddoc.name, i.name): i for ddoc in wanted.ddocs for i in ddoc.indexes
+        }
+
+        to_make = set(wanted_indexes.keys()) - set(current_indexes.keys())
+        for dname, iname in to_make:
+            idx = wanted_indexes[dname, iname]
+            await livedb.add_index(
+                ddoc=dname,
+                name=iname,
+                fields=idx.fields,
+            )
+        # TODO: Delete indexes
+        # TODO: Update indexes
 
 
 def _arg_parser():

@@ -82,7 +82,7 @@ async def test_unstruct(attrs_session, attrs_models):
     Tests that the data we send to CouchDB is what we expect
     """
     doc = attrs_models.Foo(spam="eggs", _id="test")
-    blob = attrs_session.loader().dumpj(doc)
+    blob = attrs_session.loader().dump_to_blob(doc)
 
     assert blob == {"": "Foo3", "spam": "eggs"}
 
@@ -92,7 +92,7 @@ async def test_struct(attrs_session, attrs_models):
     Tests that the data we can handle data we expect from CouchDB
     """
     blob = {"_id": "test", "": "Foo3", "spam": "eggs"}
-    doc = attrs_session.loader().loadj(blob)
+    doc = attrs_session.loader().load_from_blob(blob)
 
     assert isinstance(doc, attrs_models.Foo)
     assert doc.spam == "eggs"
@@ -105,14 +105,14 @@ async def test_put(attrs_database, attrs_models):
     """
     doc = attrs_models.Foo(spam="eggs")
     await attrs_database.attempt_put(doc, "test")
+    assert doc._id == "test"
+    assert doc._rev
 
     doc2 = await attrs_database.get("test")
 
     assert isinstance(doc2, attrs_models.Foo)
 
-    # Requires https://github.com/teahouse-hosting/chaise/issues/1
-    # assert doc == doc2
-    assert isinstance(doc2, attrs_models.Foo)
+    assert doc == doc2
 
 
 async def test_delete(attrs_database, attrs_models):
@@ -216,3 +216,23 @@ async def test_metadata(attrs_database, attrs_models):
     assert doc2._attachments == {}
     assert doc2._conflicts == []
     assert doc2._revisions
+
+
+async def test_all_docs_design(attrs_database, attrs_models):
+    """
+    Test that iter_all_docs skips design documents
+    """
+    # Skip document handling to insert raw design document
+    await attrs_database._session._request(
+        "PUT",
+        attrs_database._name,
+        "_design/spam",
+        json={},
+    )
+
+    doc = attrs_models.Foo(spam="eggs")
+    await attrs_database.attempt_put(doc, "test")
+
+    all_docs = [ref async for ref in attrs_database.iter_all_docs()]
+
+    assert len(all_docs) == 1

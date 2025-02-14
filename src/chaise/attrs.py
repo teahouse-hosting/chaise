@@ -191,3 +191,8 @@ class AttrsRegistry(DocumentRegistry):
         :meta private:
         """
         return converter.unstructure(doc)
+
+    def update_doc(self, doc, **fields):
+        assert all(k.startswith("_") for k in fields)
+        for k, v in fields.items():
+            setattr(doc, k, v)
