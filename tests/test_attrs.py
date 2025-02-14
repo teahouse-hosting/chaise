@@ -216,3 +216,23 @@ async def test_metadata(attrs_database, attrs_models):
     assert doc2._attachments == {}
     assert doc2._conflicts == []
     assert doc2._revisions
+
+
+async def test_all_docs_design(attrs_database, attrs_models):
+    """
+    Test that iter_all_docs skips design documents
+    """
+    # Skip document handling to insert raw design document
+    await attrs_database._session._request(
+        "PUT",
+        attrs_database._name,
+        "_design/spam",
+        json={},
+    )
+
+    doc = attrs_models.Foo(spam="eggs")
+    await attrs_database.attempt_put(doc, "test")
+
+    all_docs = [ref async for ref in attrs_database.iter_all_docs()]
+
+    assert len(all_docs) == 1

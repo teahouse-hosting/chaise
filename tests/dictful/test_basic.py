@@ -129,6 +129,26 @@ async def test_all_docs_include(basic_database):
     assert await ref.doc() == doc
 
 
+async def test_all_docs_design(basic_database):
+    """
+    Test that iter_all_docs skips design documents
+    """
+    # Skip document handling to insert raw design document
+    await basic_database._session._request(
+        "PUT",
+        basic_database._name,
+        "_design/spam",
+        json={},
+    )
+
+    doc = Document(spam="eggs")
+    await basic_database.attempt_put(doc, "test")
+
+    all_docs = [ref async for ref in basic_database.iter_all_docs()]
+
+    assert len(all_docs) == 1
+
+
 async def test_find_one(basic_database):
     doc1 = Document(email="test1@example.com", password="FAKE DON'T USE")
     doc2 = Document(email="test2@example.com", password="12345")
