@@ -556,8 +556,33 @@ class Database:
                 _db=self, docid=ref["id"], rev=ref["value"]["rev"], _doc=doc
             )
 
-    # TODO: Mango searches
-    # TODO: Database operations
+    async def iter_indexes(self) -> AsyncIterator[structs.Index]:
+        resp = await self._session._request("GET", self._name, "_index")
+        payload = resp.json()
+        for idx in payload["indexes"]:
+            if idx["ddoc"] is None and idx["name"] == "_all_docs":
+                continue
+            yield structs.Index.from_dict(idx)
+
+    async def add_index(
+        self,
+        name: str | None = None,
+        *,
+        fields: list[str],
+        ddoc: str | None = None,
+        type: str = "json",
+    ):
+        await self._session._request(
+            "POST",
+            self._name,
+            "_index",
+            json={
+                "index": {"fields": list(fields)},
+                "name": name,
+                "ddoc": ddoc,
+                "type": type,
+            },
+        )
 
 
 class NoServerFound(Exception):

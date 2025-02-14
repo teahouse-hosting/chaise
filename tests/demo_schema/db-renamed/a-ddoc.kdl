@@ -1,0 +1,8 @@
+index "foo" {
+    field "spam"
+    field "eggs"
+}
+
+index "bar" {
+    fields "quux" "baz"
+}
