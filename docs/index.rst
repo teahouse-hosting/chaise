@@ -22,3 +22,4 @@ This includes features like:
 
    prose/index
    api/index
+   cli
