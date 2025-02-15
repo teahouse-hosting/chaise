@@ -1614,4 +1614,4 @@ testing = ["docker"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "66b0ef2cbd390863af334c583756dbd07162b4b72d6220a8d176262d35ca09b4"
+content-hash = "fafbee2dcc09e26403bfaca5a1ee4a9cd31d691e99698e2480bac55501b0b34a"
