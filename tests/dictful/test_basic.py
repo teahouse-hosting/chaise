@@ -18,6 +18,8 @@ async def test_put(basic_database):
     """
     doc = Document(spam="eggs")
     await basic_database.attempt_put(doc, "test")
+    assert doc.id == "test"
+    assert doc.rev
 
     doc2 = await basic_database.get("test")
 
@@ -44,9 +46,12 @@ async def test_simple_mutate(basic_database):
     """
     doc = Document(spam="eggs")
     await basic_database.attempt_put(doc, "test")
+    r1 = doc.rev
 
     async for doc in basic_database.mutate("test"):
         doc["spam"] = "foobar"
+
+    assert doc.rev != r1
 
     doc = await basic_database.get("test")
     assert doc["spam"] == "foobar"
@@ -122,6 +127,26 @@ async def test_all_docs_include(basic_database):
     assert ref.docid == "test"
     assert ref._doc is not None
     assert await ref.doc() == doc
+
+
+async def test_all_docs_design(basic_database):
+    """
+    Test that iter_all_docs skips design documents
+    """
+    # Skip document handling to insert raw design document
+    await basic_database._session._request(
+        "PUT",
+        basic_database._name,
+        "_design/spam",
+        json={},
+    )
+
+    doc = Document(spam="eggs")
+    await basic_database.attempt_put(doc, "test")
+
+    all_docs = [ref async for ref in basic_database.iter_all_docs()]
+
+    assert len(all_docs) == 1
 
 
 async def test_find_one(basic_database):

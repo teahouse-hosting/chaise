@@ -40,7 +40,7 @@ class classprop:
     :meta private:
     """
 
-    def __init__(self, factory: typing.Callable[[type], typing.Any]):
+    def __init__(self, factory: typing.Callable):
         self._factory = factory
         self.__doc__ = factory.__doc__
 
@@ -174,7 +174,7 @@ class AttrsRegistry(DocumentRegistry):
         """
 
         # This is some shenanigans because names
-        class Document(globals()["Document"]):
+        class Document(globals()["Document"]):  # type: ignore
             __doc__ = vars(AttrsRegistry)["Document"].__doc__
             __parent = cls
 
@@ -191,3 +191,8 @@ class AttrsRegistry(DocumentRegistry):
         :meta private:
         """
         return converter.unstructure(doc)
+
+    def update_doc(self, doc, **fields):
+        assert all(k.startswith("_") for k in fields)
+        for k, v in fields.items():
+            setattr(doc, k, v)

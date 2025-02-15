@@ -23,4 +23,9 @@ clean:
   poetry env remove --all
   rm -r .*_cache
 
+
+# Run mypy
+mypy:
+  poetry run mypy src
+
 mod docs

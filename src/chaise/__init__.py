@@ -1,6 +1,15 @@
 import json
 import typing
-from typing import AsyncIterator, Literal, Callable, Protocol, TypeVar, Generic
+from typing import (
+    AsyncIterator,
+    Literal,
+    Callable,
+    Protocol,
+    TypeVar,
+    Generic,
+    ClassVar,
+    Any,
+)
 import warnings
 
 import httpx
@@ -10,6 +19,12 @@ from . import structs, _query
 
 DOCT = TypeVar("DOCT")
 
+# 3.12: type TypeIDType = ...
+# Technically, anything JSONable is allowable, but only allowing atomic types
+# makes a bunch of reasoning easier.
+#: The type of class identifiers
+TypeIDType = str | int | bool | None
+
 
 class DocumentLoader(Protocol, Generic[DOCT]):
     """
@@ -17,14 +32,19 @@ class DocumentLoader(Protocol, Generic[DOCT]):
     instances.
     """
 
-    def loadj(self, blob: dict) -> DOCT:
+    def load_from_blob(self, blob: dict) -> DOCT:
         """
         Convert a JSON blob into a document object.
         """
 
-    def dumpj(self, doc: DOCT) -> dict:
+    def dump_to_blob(self, doc: DOCT) -> dict:
         """
         Convert a document into a JSON blob.
+        """
+
+    def update_doc(self, doc: DOCT, **fields):
+        """
+        Update a document object in-place.
         """
 
     def get_type_names(self, cls) -> list[str]:
@@ -44,19 +64,19 @@ class DocumentRegistry:
 
     TYPE_KEY = ""
 
-    _docclasses = {}
-    _migrations = []
+    _docclasses: ClassVar[dict[TypeIDType, type]] = {}
+    _migrations: ClassVar[list[tuple[TypeIDType, TypeIDType, Callable]]] = []
 
     def __init_sublcass__(cls):
         cls._docclasses = {}
         cls._migrations = []
 
     @classmethod
-    def _get_class_from_name(cls, name: str) -> type:
+    def _get_class_from_name(cls, name: TypeIDType) -> type:
         return cls._docclasses[name]
 
     @classmethod
-    def _get_name_from_class(cls, klass: type) -> str:
+    def _get_name_from_class(cls, klass: type) -> TypeIDType:
         for name, kind in cls._docclasses.items():
             if issubclass(klass, kind):  # In case of decorator shenanigans
                 return name
@@ -64,7 +84,7 @@ class DocumentRegistry:
             raise ValueError(f"Couldn't find name for {klass}")
 
     @classmethod
-    def document(cls, name: str):
+    def document(cls, name: TypeIDType):
         """
         Register a class as a loadable couch document.
 
@@ -117,6 +137,12 @@ class DocumentRegistry:
         """
         raise NotImplementedError
 
+    def update_doc(self, doc, **fields):
+        """
+        Update a doc in-place
+        """
+        raise NotImplementedError
+
     def _migrate(self, bname, doc):
         while funcs := [f for b, _, f in self._migrations if b == bname]:
             (func,) = funcs
@@ -124,14 +150,14 @@ class DocumentRegistry:
             bname = self._get_name_from_class(type(doc))
         return doc
 
-    def loadj(self, blob):
+    def load_from_blob(self, blob):
         type = blob.pop(self.TYPE_KEY)
         klass = self._get_class_from_name(type)
         doc = self.load_doc(klass, blob)
         doc = self._migrate(type, doc)
         return doc
 
-    def dumpj(self, doc):
+    def dump_to_blob(self, doc):
         blob = self.dump_doc(doc)
         blob[self.TYPE_KEY] = self._get_name_from_class(type(doc))
         return blob
@@ -322,14 +348,14 @@ class Database:
             docid = blob["_id"]
         if etag is ...:
             etag = f'"{blob["_rev"]}"'
-        doc = self._session.loader().loadj(blob)
+        doc = self._session.loader().load_from_blob(blob)
         doc.__db = db
         doc.__docid = docid
         doc.__etag = etag
         return doc
 
     def _doc2blob(self, doc):
-        blob = self._session.loader().dumpj(doc)
+        blob = self._session.loader().dump_to_blob(doc)
         db = docid = etag = None
         try:
             db = doc.__db
@@ -338,6 +364,20 @@ class Database:
         except AttributeError:
             pass
         return blob, db, docid, etag
+
+    def _touch_doc(self, doc, *, db=None, etag=None, rev=None, id=None):
+        fields = {}
+        if etag is not None:
+            doc.__etag = etag
+        if db is not None:
+            doc.__db = db
+        if rev is not None:
+            fields["_rev"] = rev
+        if id is not None:
+            doc.__docid = id
+            fields["_id"] = id
+        if fields:
+            self._session.loader().update_doc(doc, **fields)
 
     async def get(
         self,
@@ -445,7 +485,7 @@ class Database:
 
         See :http:post:`/{db}/_find`
         """
-        json_body = {
+        json_body: dict[str, Any] = {
             "selector": _query.munge_query(selector, self._session.loader),
             "bookmark": None,
         }
@@ -488,13 +528,22 @@ class Database:
         """
         blob, _db, _docid, etag = self._doc2blob(doc)
         assert _db is None or _db == self._name
-        await self._session._request(
+        resp = await self._session._request(
             "PUT",
             self._name,
             _docid or docid,
             params={"batch": "ok"} if batch else {},
             headers={"If-Match": etag} if etag else {},
             json=blob,
+        )
+        payload = resp.json()
+        assert payload["ok"]
+        self._touch_doc(
+            doc,
+            db=self._name,
+            id=payload["id"],
+            etag=resp.headers["ETag"],
+            rev=resp.json()["rev"],
         )
 
     async def attempt_delete(self, doc, *, batch: bool = False):
@@ -546,18 +595,19 @@ class Database:
                 break
 
     async def iter_all_docs(
-        self, include_docs: bool = False
+        self, *, include_docs: bool = False
     ) -> AsyncIterator[structs.AllDocs_DocRef]:
         """
-        List all documents
+        List all documents.
 
-        TODO: More params
+        This excludes design documents, see :meth:`.iter_design_docs`.
 
         Args:
             include_docs: Pre-load documents
 
         See :http:get:`/{db}/_all_docs`
         """
+        # TODO: Pagination
         resp = await self._session._request(
             "GET",
             self._name,
@@ -571,6 +621,8 @@ class Database:
         )
         blob = resp.json()
         for ref in blob["rows"]:
+            if ref["id"].startswith("_design/"):
+                continue
             if "doc" in ref:
                 doc = self._blob2doc(ref["doc"], self._name, ref["id"])
             else:
@@ -579,8 +631,33 @@ class Database:
                 _db=self, docid=ref["id"], rev=ref["value"]["rev"], _doc=doc
             )
 
-    # TODO: Mango searches
-    # TODO: Database operations
+    async def iter_indexes(self) -> AsyncIterator[structs.Index]:
+        resp = await self._session._request("GET", self._name, "_index")
+        payload = resp.json()
+        for idx in payload["indexes"]:
+            if idx["ddoc"] is None and idx["name"] == "_all_docs":
+                continue
+            yield structs.Index.from_dict(idx)
+
+    async def add_index(
+        self,
+        name: str | None = None,
+        *,
+        fields: list[str],
+        ddoc: str | None = None,
+        type: str = "json",
+    ):
+        await self._session._request(
+            "POST",
+            self._name,
+            "_index",
+            json={
+                "index": {"fields": list(fields)},
+                "name": name,
+                "ddoc": ddoc,
+                "type": type,
+            },
+        )
 
 
 class NoServerFound(Exception):
@@ -614,7 +691,7 @@ class SessionPool:
         """
         return httpx.AsyncClient(http2=True, follow_redirects=True)
 
-    async def iter_servers(self) -> AsyncIterator[str]:
+    async def iter_servers(self) -> AsyncIterator[str | httpx.URL]:
         """
         Produce the list of potential servers.
 

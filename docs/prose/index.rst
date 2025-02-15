@@ -11,4 +11,5 @@ Chaise encapsulates several nuanced concepts, so let's talk about them.
    types
    query
    migrations
+   cli
    integrations/index

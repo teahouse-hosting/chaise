@@ -12,4 +12,5 @@ Detailed API descriptions
    helpers
    dictful
    attrs
+   testing
    structs
