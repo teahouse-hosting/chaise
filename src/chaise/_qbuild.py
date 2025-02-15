@@ -73,7 +73,7 @@ class QAttr:
         return Selector({self.name: {"$exists": yes}})
 
     def isinstance(self, kind: type):
-        cname = {
+        cnames: dict[type | None, str] = {
             None: "null",
             type(None): "null",
             bool: "boolean",
@@ -84,7 +84,8 @@ class QAttr:
             tuple: "array",
             dict: "object",
             object: "object",
-        }[kind]
+        }
+        cname: str = cnames[kind]
         return Selector({self.name: {"$type": cname}})
 
     def in_(self, seq):
