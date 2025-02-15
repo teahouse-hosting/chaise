@@ -5,7 +5,7 @@ Deals with finding and loading database/ddoc description files.
 import dataclasses
 import importlib.resources
 import posixpath
-from typing import Iterable
+from typing import Iterable, Protocol
 
 import ckdl
 
@@ -36,12 +36,10 @@ class DeclaredDB:
     ddocs: list[DesignDoc]
 
 
-class Loader:
-    def load_database(self, file_contents: str, db: DeclaredDB):
-        raise NotImplementedError
+class Loader(Protocol):
+    def load_database(self, file_contents: str, db: DeclaredDB): ...
 
-    def load_ddoc(self, file_contents: str, ddoc: DesignDoc):
-        raise NotImplementedError
+    def load_ddoc(self, file_contents: str, ddoc: DesignDoc): ...
 
 
 class KdlLoader:
@@ -57,7 +55,7 @@ class KdlLoader:
             case ():
                 pass
             case (name,):
-                db.name = name
+                db.name = str(name)
             case _:
                 raise ParseError(f"Invalid KDL: Unexpected arguments: {node}")
 

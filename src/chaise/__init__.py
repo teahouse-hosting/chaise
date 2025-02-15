@@ -1,6 +1,15 @@
 import json
 import typing
-from typing import AsyncIterator, Literal, Callable, Protocol, TypeVar, Generic
+from typing import (
+    AsyncIterator,
+    Literal,
+    Callable,
+    Protocol,
+    TypeVar,
+    Generic,
+    ClassVar,
+    Any,
+)
 import warnings
 
 import httpx
@@ -9,6 +18,12 @@ from . import structs
 
 
 DOCT = TypeVar("DOCT")
+
+# 3.12: type TypeIDType = ...
+# Technically, anything JSONable is allowable, but only allowing atomic types
+# makes a bunch of reasoning easier.
+#: The type of class identifiers
+TypeIDType = str | int | bool | None
 
 
 class DocumentLoader(Protocol, Generic[DOCT]):
@@ -44,19 +59,19 @@ class DocumentRegistry:
 
     TYPE_KEY = ""
 
-    _docclasses = {}
-    _migrations = []
+    _docclasses: ClassVar[dict[TypeIDType, type]] = {}
+    _migrations: ClassVar[list[tuple[TypeIDType, TypeIDType, Callable]]] = []
 
     def __init_sublcass__(cls):
         cls._docclasses = {}
         cls._migrations = []
 
     @classmethod
-    def _get_class_from_name(cls, name: str) -> type:
+    def _get_class_from_name(cls, name: TypeIDType) -> type:
         return cls._docclasses[name]
 
     @classmethod
-    def _get_name_from_class(cls, klass: type) -> str:
+    def _get_name_from_class(cls, klass: type) -> TypeIDType:
         for name, kind in cls._docclasses.items():
             if issubclass(klass, kind):  # In case of decorator shenanigans
                 return name
@@ -64,7 +79,7 @@ class DocumentRegistry:
             raise ValueError(f"Couldn't find name for {klass}")
 
     @classmethod
-    def document(cls, name: str):
+    def document(cls, name: TypeIDType):
         """
         Register a class as a loadable couch document.
 
@@ -450,7 +465,7 @@ class Database:
 
         See :http:post:`/{db}/_find`
         """
-        json_body = {"selector": selector, "bookmark": None}
+        json_body: dict[str, Any] = {"selector": selector, "bookmark": None}
 
         if use_index is not None:
             json_body |= {"use_index": use_index}
@@ -653,7 +668,7 @@ class SessionPool:
         """
         return httpx.AsyncClient(http2=True, follow_redirects=True)
 
-    async def iter_servers(self) -> AsyncIterator[str]:
+    async def iter_servers(self) -> AsyncIterator[str | httpx.URL]:
         """
         Produce the list of potential servers.
 
