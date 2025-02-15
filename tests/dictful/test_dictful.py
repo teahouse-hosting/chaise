@@ -192,3 +192,18 @@ async def test_find_migrations(dict_database, dict_models):
 
     assert len(docs) == 3
     assert all(isinstance(d, dict_models.Foo) for d in docs)
+
+
+async def test_type_migratios(dict_database, dict_models):
+    # Low-level put to force the old type key
+    resp = await dict_database._session._request(
+        "PUT",
+        dict_database._name,
+        "test",
+        json={"": "Counter"},
+    )
+    payload = resp.json()
+    assert payload["ok"]
+
+    doc = await dict_database.get("test")
+    assert isinstance(doc, dict_models.Counter)
