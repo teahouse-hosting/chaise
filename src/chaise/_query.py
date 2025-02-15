@@ -79,7 +79,11 @@ class _QueryMunger(_BlobWalker):
 
     def munge_dict(self, val):
         if type in val:
-            names = [self.registry.get_type_names(cls) for cls in _deunion(val[type])]
+            names = [
+                name
+                for cls in _deunion(val[type])
+                for name in self.registry.get_type_names(cls)
+            ]
 
             if len(names) == 0:
                 raise ValueError(f"Unable to get Database names for {val[type]!r}")
