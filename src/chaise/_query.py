@@ -59,16 +59,16 @@ class _BlobWalker:
             self(item)
 
 
-def _deunion(cls) -> list[type]:
+def _deunion(cls) -> tuple[type]:
     """
     Turns classes and unions into lists
     """
     if isinstance(cls, type):
-        return [cls]
+        return (cls,)
     elif isinstance(cls, types.UnionType):
-        return list(cls.__args__)
+        return typing.get_args(cls)
     elif isinstance(cls, _UnionType):
-        return list(cls.__args__)
+        return typing.get_args(cls)
     else:
         raise TypeError(f"Can't handle a class description of {cls!r}")
 
@@ -79,10 +79,7 @@ class _QueryMunger(_BlobWalker):
 
     def munge_dict(self, val):
         if type in val:
-            classes = _deunion(val[type])
-            names = []
-            for cls in classes:
-                names += self.registry.get_type_names(cls)
+            names = [self.registry.get_type_names(cls) for cls in _deunion(val[type])]
 
             if len(names) == 0:
                 raise ValueError(f"Unable to get Database names for {val[type]!r}")
