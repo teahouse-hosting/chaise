@@ -84,7 +84,7 @@ async def test_unstruct(attrs_session, attrs_models):
     doc = attrs_models.Foo(spam="eggs", _id="test")
     blob = attrs_session.loader().dump_to_blob(doc)
 
-    assert blob == {"": "Foo3", "spam": "eggs"}
+    assert blob == {attrs_session.loader.TYPE_KEY: "Foo3", "spam": "eggs"}
 
 
 async def test_struct(attrs_session, attrs_models):

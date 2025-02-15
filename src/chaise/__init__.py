@@ -61,7 +61,7 @@ class DocumentRegistry:
     Do not use directly. You probably want one of the :ref:`integrations`.
     """
 
-    TYPE_KEY = ""
+    TYPE_KEY = "@"
 
     _docclasses: ClassVar[dict[TypeIDType, type]] = {}
     _migrations: ClassVar[list[tuple[TypeIDType, TypeIDType, Callable]]] = []
@@ -150,7 +150,12 @@ class DocumentRegistry:
         return doc
 
     def load_from_blob(self, blob):
-        type = blob.pop(self.TYPE_KEY)
+        if "" in blob:
+            type = blob.pop("")
+        elif self.TYPE_KEY in blob:
+            type = blob.pop(self.TYPE_KEY)
+        else:
+            raise ValueError("Unable to find type marker")
         klass = self._get_class_from_name(type)
         doc = self.load_doc(klass, blob)
         doc = self._migrate(type, doc)
