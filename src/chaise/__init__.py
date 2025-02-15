@@ -1,5 +1,4 @@
 import json
-import typing
 from typing import (
     AsyncIterator,
     Literal,
@@ -162,7 +161,7 @@ class DocumentRegistry:
         blob[self.TYPE_KEY] = self._get_name_from_class(type(doc))
         return blob
 
-    def get_type_names(self, cls) -> list[str]:
+    def get_type_names(self, cls) -> list[TypeIDType]:
         """
         Get all the names a given class might use in the database.
         """
@@ -446,9 +445,7 @@ class Database:
 
     # TODO: Attachments
 
-    async def find_one(
-        self, selector: typing.Mapping, use_index: str | list[str] | None = None
-    ):
+    async def find_one(self, selector: dict, use_index: str | list[str] | None = None):
         """
         Get a single document based on ``selector``.
 
@@ -476,7 +473,7 @@ class Database:
 
     async def find(
         self,
-        selector: typing.Mapping,
+        selector: dict,
         use_index: str | list[str] | None = None,
         pagesize: int | None = None,
     ) -> AsyncIterator:

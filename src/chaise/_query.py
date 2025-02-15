@@ -93,7 +93,7 @@ class _QueryMunger(_BlobWalker):
             del val[type]
 
 
-def munge_query(query: dict, registry):
+def munge_query(query: dict, registry) -> dict:
     """
     Compile out chaise's query extensions and prepare it for CouchDB.
     """
