@@ -348,6 +348,19 @@ class Database:
             pass
         return blob, db, docid, etag
 
+    def _doc_details(self, doc):
+        """
+        Like _doc2blob but doesn't do the blob work
+        """
+        db = docid = etag = None
+        try:
+            db = doc.__db
+            docid = doc.__docid
+            etag = doc.__etag
+        except AttributeError:
+            pass
+        return db, docid, etag
+
     def _touch_doc(self, doc, *, db=None, etag=None, rev=None, id=None):
         fields = {}
         if etag is not None:
@@ -529,7 +542,7 @@ class Database:
 
         See :http:delete:`/{db}/{docid}`
         """
-        _, db, docid, etag = self._doc2blob(doc)
+        db, docid, etag = self._doc_details(doc)
         assert db == self._name
         assert docid
         await self._session._request(
@@ -552,7 +565,7 @@ class Database:
         """
         # FIXME: Figure out signature
 
-    async def mutate(self, docid: str) -> AsyncIterator:
+    async def mutate(self, id_or_doc: str | object) -> AsyncIterator:
         """
         A document mutation loop::
 
@@ -560,8 +573,17 @@ class Database:
                 doc.foo = "bar"
 
         Will replay the mutation until it goes through.
+
+        Also accepts a previously-gotten document.
         """
-        doc = await self.get(docid)
+        if isinstance(id_or_doc, str):
+            docid = id_or_doc
+            doc = await self.get(id_or_doc)
+        else:
+            doc = id_or_doc
+            db, docid, _ = self._doc_details(doc)
+            assert db == self._name
+        assert docid
         while True:
             yield doc
             try:
