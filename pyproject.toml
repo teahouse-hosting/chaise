@@ -49,7 +49,7 @@ attrs = ">=23.2,<25.0"
 cattrs = ">=23.2.3,<25.0.0"
 docker = "^7.1.0"
 mypy = "^1.17.0"
-types-docker = "^7.1.0.20250705"
+types-docker = "^7.1.0.20250809"
 
 
 [tool.poetry.group.docs.dependencies]
