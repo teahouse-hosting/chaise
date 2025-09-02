@@ -55,7 +55,7 @@ types-docker = "^7.1.0.20250809"
 [tool.poetry.group.docs.dependencies]
 sphinx = "^8.2.3"
 furo = "^2024.8.6"
-sphinxext-opengraph = "^0.12.0"
+sphinxext-opengraph = "^0.13.0"
 sphinx-inline-tabs = "^2023.4.21"
 sphinx-autobuild = "^2024.4.16"
 sphinx-copybutton = "^0.5.2"
