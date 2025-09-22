@@ -1,5 +1,4 @@
 import json
-import typing
 from typing import (
     AsyncIterator,
     Literal,
@@ -14,7 +13,7 @@ import warnings
 
 import httpx
 
-from . import structs
+from . import structs, _query
 
 
 DOCT = TypeVar("DOCT")
@@ -47,6 +46,11 @@ class DocumentLoader(Protocol, Generic[DOCT]):
         Update a document object in-place.
         """
 
+    def get_type_names(self, cls) -> list[str]:
+        """
+        Get all the names a given class might use in the database.
+        """
+
 
 class DocumentRegistry:
     """
@@ -57,7 +61,7 @@ class DocumentRegistry:
     Do not use directly. You probably want one of the :ref:`integrations`.
     """
 
-    TYPE_KEY = ""
+    TYPE_KEY = "@"
 
     _docclasses: ClassVar[dict[TypeIDType, type]] = {}
     _migrations: ClassVar[list[tuple[TypeIDType, TypeIDType, Callable]]] = []
@@ -146,7 +150,12 @@ class DocumentRegistry:
         return doc
 
     def load_from_blob(self, blob):
-        type = blob.pop(self.TYPE_KEY)
+        if "" in blob:
+            type = blob.pop("")
+        elif self.TYPE_KEY in blob:
+            type = blob.pop(self.TYPE_KEY)
+        else:
+            raise ValueError("Unable to find type marker")
         klass = self._get_class_from_name(type)
         doc = self.load_doc(klass, blob)
         doc = self._migrate(type, doc)
@@ -156,6 +165,18 @@ class DocumentRegistry:
         blob = self.dump_doc(doc)
         blob[self.TYPE_KEY] = self._get_name_from_class(type(doc))
         return blob
+
+    def get_type_names(self, cls) -> list[TypeIDType]:
+        """
+        Get all the names a given class might use in the database.
+        """
+        aname = self._get_name_from_class(cls)
+        names = [aname]
+        while bnames := [b for b, a, _ in self._migrations if a == aname]:
+            (bname,) = bnames
+            names.append(bname)
+            aname = bname
+        return names
 
 
 class Conflict(Exception):
@@ -429,15 +450,16 @@ class Database:
 
     # TODO: Attachments
 
-    async def find_one(
-        self, selector: typing.Mapping, use_index: str | list[str] | None = None
-    ):
+    async def find_one(self, selector: dict, use_index: str | list[str] | None = None):
         """
         Get a single document based on ``selector``.
 
         See :http:post:`/{db}/_find`
         """
-        json_body = {"selector": selector, "limit": 2}
+        json_body = {
+            "selector": _query.munge_query(selector, self._session.loader),
+            "limit": 2,
+        }
 
         if use_index is not None:
             json_body |= {"use_index": use_index}
@@ -456,7 +478,7 @@ class Database:
 
     async def find(
         self,
-        selector: typing.Mapping,
+        selector: dict,
         use_index: str | list[str] | None = None,
         pagesize: int | None = None,
     ) -> AsyncIterator:
@@ -465,7 +487,10 @@ class Database:
 
         See :http:post:`/{db}/_find`
         """
-        json_body: dict[str, Any] = {"selector": selector, "bookmark": None}
+        json_body: dict[str, Any] = {
+            "selector": _query.munge_query(selector, self._session.loader),
+            "bookmark": None,
+        }
 
         if use_index is not None:
             json_body |= {"use_index": use_index}

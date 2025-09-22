@@ -82,6 +82,9 @@ class BasicLoader:
         for k, v in fields.items():
             setattr(doc, k.removeprefix("_"), v)
 
+    def get_type_names(self, cls) -> list[str]:
+        raise TypeError(f"{type(self).__name__} does not have a concept of types")
+
 
 class BasicSession(CouchSession):
     loader = BasicLoader

@@ -9,6 +9,7 @@ Chaise encapsulates several nuanced concepts, so let's talk about them.
 
    pooling
    types
+   query
    migrations
    cli
    integrations/index
